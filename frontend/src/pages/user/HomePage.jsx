@@ -1,24 +1,27 @@
-import React from 'react';
-import Header from '../../layout/user/Header';
-import Footer from '../../layout/user/Footer';
-import HeroSection from '../../components/user/HeroSection';
-import LoginForm from '../../components/auth/LoginForm';
+import React from "react";
+import Header from "../../layout/user/Header";
+import Footer from "../../layout/user/Footer";
+import HeroSection from "../../components/user/HeroSection";
+import StatsBar from "../../components/user/StatsBar";
+import FeaturesSection from "../../components/user/FeaturesSection";
+import PracticeTopics from "../../components/user/PracticeTopics";
+import MiniChallenge from "../../components/user/MiniChallenge";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column - Hero / AI Info */}
-        <div className="lg:col-span-7">
-          <HeroSection />
-        </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-12">
+        <HeroSection />
 
-        {/* Right Column - Auth Box */}
-        <div className="lg:col-span-5">
-          <LoginForm />
-        </div>
+        <StatsBar />
+
+        <FeaturesSection />
+
+        <PracticeTopics />
+
+        <MiniChallenge />
       </main>
 
       <Footer />
