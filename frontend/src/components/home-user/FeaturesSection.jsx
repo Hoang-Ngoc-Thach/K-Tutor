@@ -10,25 +10,6 @@ import {
 export default function FeaturesSection() {
   return (
     <div className="mt-12">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">
-            Công cụ AI độc quyền
-          </h2>
-          <p className="text-sm text-gray-500">
-            Phương pháp tiếp cận thông minh, rút ngắn 50% thời gian đạt chứng
-            chỉ
-          </p>
-        </div>
-        <a
-          href="#"
-          className="text-sm font-semibold text-gray-600 hover:text-emerald-700 flex items-center gap-1"
-        >
-          Xem tất cả tính năng <ArrowRight className="w-4 h-4" />
-        </a>
-      </div>
-
       {/* Features Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1: Luyện Giao Tiếp (Theme Xanh Lá) */}

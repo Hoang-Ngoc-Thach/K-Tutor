@@ -90,13 +90,16 @@ export default function PracticeTopics() {
             Tất cả
           </button>
           <button className="whitespace-nowrap px-4 py-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs font-semibold rounded-full border border-gray-200 transition-colors">
-            Sơ cấp 1-2
+            Đã học
+          </button>
+          <button className="whitespace-nowrap px-4 py-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs font-semibold rounded-full border border-gray-200 transition-colors">
+            Chưa học
+          </button>
+          <button className="whitespace-nowrap px-4 py-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs font-semibold rounded-full border border-gray-200 transition-colors">
+            Sơ cấp
           </button>
           <button className="whitespace-nowrap px-4 py-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs font-semibold rounded-full border border-gray-200 transition-colors">
             Trung cấp
-          </button>
-          <button className="whitespace-nowrap px-4 py-2 bg-gray-50 text-gray-600 hover:bg-gray-100 text-xs font-semibold rounded-full border border-gray-200 transition-colors">
-            Du học & Đời sống
           </button>
         </div>
       </div>

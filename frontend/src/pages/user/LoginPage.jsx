@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Header from "../../layout/user/Header";
 import Footer from "../../layout/user/Footer";
-import HeroSection from "../../components/user/HeroSection";
+import HeroSection from "../../components/home-user/HeroSection";
 import LoginForm from "../../components/auth/LoginForm";
 import RegisterForm from "../../components/auth/RegisterForm"; // Import thêm form đăng ký
 
