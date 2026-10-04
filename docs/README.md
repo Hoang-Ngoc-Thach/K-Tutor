@@ -17,6 +17,7 @@
 ## Technical documentation (added in later chapters)
 
 - `architecture/` — Chapter 5 (architecture, data model, API conventions)
+- [API Contract](architecture/api-contract.md) — Draft — pending team approval (written ahead of Chapter 5; sections marked Proposed need a PRD revision first)
 
 ## Reading convention
 
