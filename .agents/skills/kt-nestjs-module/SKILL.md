@@ -1,6 +1,6 @@
 ---
 name: kt-nestjs-module
-description: Create or modify backend features in the K-Tutor NestJS API: modules, controllers, services, DTOs, TypeORM entities, MySQL connection, .env config, CORS. Use when the user asks to add an API endpoint, CRUD, database table or entity, backend config, or to connect the backend to MySQL, even if they don't say NestJS or TypeORM.
+description: Create or modify backend features in the K-Tutor NestJS API, including modules, controllers, services, DTOs, TypeORM entities, MySQL connection, .env config and CORS. Use when the user asks to add an API endpoint, CRUD, database table or entity, backend config, or to connect the backend to MySQL, even if they don't say NestJS or TypeORM.
 ---
 
 # K-Tutor backend (NestJS + TypeORM + MySQL)
@@ -15,7 +15,7 @@ Read `docs/architecture/api-contract.md` before writing any endpoint. If an endp
 
 ## Folder layout (modeled on F-Corp-OS)
 
-```
+````
 backend/src/
 ├── modules/<feature>/
 │   ├── <feature>.module.ts, .controller.ts, .service.ts
@@ -25,7 +25,7 @@ backend/src/
 ├── core/          transform.interceptor.ts
 ├── decorator/     customize.ts (@ResponseMessage, ...)
 └── helper/
-```
+````
 
 Use **relative imports**. `tsconfig.json` has `baseUrl: "./"` (the backend root, not `src`), so aliases like `modules/...` do not work here.
 
@@ -50,12 +50,12 @@ Use **relative imports**. `tsconfig.json` has `baseUrl: "./"` (the backend root,
 
 ## One-time bootstrap (only when the user asks to connect the backend to the database)
 
-```powershell
+````powershell
 cd backend
 npm i @nestjs/config @nestjs/typeorm typeorm mysql2 class-validator class-transformer @nestjs/mapped-types
-```
+````
 
-Then: `ConfigModule.forRoot({ isGlobal: true })` and `TypeOrmModule.forRootAsync(...)` in `app.module.ts`; prefix and versioning (`app.setGlobalPrefix('api')`, `app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })`), `ValidationPipe`, interceptor and CORS in `main.ts`; create `backend/.env.example`. Change nothing else. The user must create the database themselves: `CREATE DATABASE k_tutor CHARACTER SET utf8mb4;`
+Then: `ConfigModule.forRoot({ isGlobal: true })` and `TypeOrmModule.forRootAsync(...)` in `app.module.ts`; prefix and versioning (`app.setGlobalPrefix('api')`, `app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })`), `ValidationPipe`, interceptor and CORS in `main.ts`; create `core/transform.interceptor.ts` (reads the message set by `@ResponseMessage` through `Reflector`, default `'Success'`) and `decorator/customize.ts` exporting `ResponseMessage`; create `backend/.env.example`. Change nothing else. The user must create the database themselves: `CREATE DATABASE k_tutor CHARACTER SET utf8mb4;`
 
 ## Rules
 
@@ -64,11 +64,11 @@ Then: `ConfigModule.forRoot({ isGlobal: true })` and `TypeOrmModule.forRootAsync
 
 ## Validate before saying done
 
-```powershell
+````powershell
 cd backend
 npm run build
 npm test
-```
+````
 
 Then start `npm run start:dev` and test the new endpoints with the user (Postman or `curl`).
 
@@ -78,4 +78,14 @@ Then start `npm run start:dev` and test the new endpoints with the user (Postman
 - Korean text breaks without `utf8mb4`. Set `charset: 'utf8mb4'` in TypeORM and create the database with the same charset.
 - The frontend's `VITE_BACKEND_URL` must include `/api/v1`; endpoint paths in `docs/architecture/api-contract.md` are relative to it.
 - `tsconfig` has `strictNullChecks: false`; don't "fix" this.
+- In this file's frontmatter, never put a colon followed by a space inside `description`. It breaks the YAML and the skill silently stops appearing.
 - Add a new gotcha here every time you have to correct the AI.
+````
+````
+
+Khi copy, bạn lấy từ dòng `---` đầu tiên đến dòng `- Add a new gotcha...` cuối cùng, **không** copy ba dấu backtick bọc ngoài khung.
+
+Sau khi lưu, làm tiếp:
+1. `Ctrl + Shift + P`, gõ **Reload Window**, Enter.
+2. Gõ `/kt` trong ô chat, xác nhận `kt-nestjs-module` vẫn hiện (nếu không hiện, dòng `description` bị sai khi dán).
+3. Chạy prompt bổ sung `@ResponseMessage` mình đã đưa ở tin nhắn trước.
