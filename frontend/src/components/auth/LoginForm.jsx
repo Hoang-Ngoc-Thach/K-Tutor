@@ -1,8 +1,48 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { getAuthErrorMessage } from "../../api/auth";
+import { useAuth } from "../../context/useAuth";
 
-export default function LoginForm({ onSwitchToRegister }) {
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// initialEmail / notice come from AuthPage after a successful registration.
+export default function LoginForm({
+  onSwitchToRegister,
+  initialEmail = "",
+  notice = "",
+}) {
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    const trimmedEmail = email.trim();
+    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setError("Vui lòng nhập email hợp lệ.");
+      return;
+    }
+    if (!password) {
+      setError("Vui lòng nhập mật khẩu.");
+      return;
+    }
+
+    setError("");
+    setSubmitting(true);
+    try {
+      // On success AuthPage sees the new user and redirects.
+      await login({ email: trimmedEmail, password, remember });
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="w-full bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
@@ -26,15 +66,27 @@ export default function LoginForm({ onSwitchToRegister }) {
         </button>
       </div>
 
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+      {notice && (
+        <p
+          role="status"
+          className="mb-4 text-xs text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2"
+        >
+          {notice}
+        </p>
+      )}
+
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div>
           <label className="block text-xs font-semibold text-gray-700 mb-1">
-            Email hoặc Tên tài khoản
+            Email
           </label>
           <div className="relative">
             <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
-              type="text"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="name@example.com"
               className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
@@ -54,6 +106,9 @@ export default function LoginForm({ onSwitchToRegister }) {
             <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Nhập mật khẩu của bạn"
               className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
@@ -75,6 +130,8 @@ export default function LoginForm({ onSwitchToRegister }) {
           <input
             type="checkbox"
             id="remember"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
             className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
           />
           <label
@@ -85,11 +142,22 @@ export default function LoginForm({ onSwitchToRegister }) {
           </label>
         </div>
 
+        {error && (
+          <p
+            role="alert"
+            className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2"
+          >
+            {error}
+          </p>
+        )}
+
         <button
           type="submit"
-          className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md mt-2"
+          disabled={submitting}
+          className="w-full bg-emerald-800 hover:bg-emerald-900 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm shadow-md mt-2"
         >
-          Đăng Nhập <ArrowRight className="w-4 h-4" />
+          {submitting ? "Đang đăng nhập..." : "Đăng Nhập"}{" "}
+          {!submitting && <ArrowRight className="w-4 h-4" />}
         </button>
       </form>
 

@@ -1,7 +1,17 @@
 import React from "react";
-import { Globe, HelpCircle, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Globe, HelpCircle, ArrowRight, LogOut } from "lucide-react";
+import { useAuth } from "../../context/useAuth";
 
 export default function Header() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/auth");
+  };
+
   return (
     <header className="w-full bg-white border-b border-gray-100">
       {/* Lớp ngoài: Trải dài 100% màn hình */}
@@ -43,9 +53,28 @@ export default function Header() {
           <button className="flex items-center gap-1 hover:text-emerald-700">
             <HelpCircle className="w-4 h-4" /> Trợ giúp
           </button>
-          <button className="bg-emerald-900 hover:bg-emerald-950 text-white font-semibold px-4 py-2 rounded-xl flex items-center gap-1 transition whitespace-nowrap">
-            Đăng ký ngay <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {user ? (
+            <>
+              <span className="hidden sm:inline max-w-[160px] truncate text-gray-500">
+                {user.email}
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="bg-emerald-900 hover:bg-emerald-950 text-white font-semibold px-4 py-2 rounded-xl flex items-center gap-1 transition whitespace-nowrap"
+              >
+                Đăng xuất <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => navigate("/auth")}
+              className="bg-emerald-900 hover:bg-emerald-950 text-white font-semibold px-4 py-2 rounded-xl flex items-center gap-1 transition whitespace-nowrap"
+            >
+              Đăng ký ngay <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </header>

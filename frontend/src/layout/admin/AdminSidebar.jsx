@@ -1,29 +1,30 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import {
-  BarChart2,
-  BookOpen,
-  Users,
-  LogOut,
-} from 'lucide-react';
+import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/useAuth";
+import { BarChart2, BookOpen, Users, LogOut } from "lucide-react";
 
 export default function AdminSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  const isDashboardActive = location.pathname === '/admin';
-  const isContentActive = location.pathname.startsWith('/admin/content');
-  const isUsersActive = location.pathname.startsWith('/admin/users');
+  const handleLogout = () => {
+    logout();
+    navigate("/auth");
+  };
+
+  const isDashboardActive = location.pathname === "/admin";
+  const isContentActive = location.pathname.startsWith("/admin/content");
+  const isUsersActive = location.pathname.startsWith("/admin/users");
 
   const getNavClass = (isActive) => {
     return isActive
-      ? 'flex items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-semibold text-sm'
-      : 'flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-medium transition';
+      ? "flex items-center gap-3 px-3 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-semibold text-sm"
+      : "flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 text-sm font-medium transition";
   };
 
   const getIconClass = (isActive) => {
-    return isActive
-      ? 'w-4 h-4 text-emerald-700'
-      : 'w-4 h-4 text-gray-400';
+    return isActive ? "w-4 h-4 text-emerald-700" : "w-4 h-4 text-gray-400";
   };
 
   return (
@@ -50,35 +51,20 @@ export default function AdminSidebar() {
 
         {/* Navigation Links */}
         <nav className="space-y-1">
-          <Link
-            to="/admin"
-            className={getNavClass(isDashboardActive)}
-          >
-            <BarChart2
-              className={getIconClass(isDashboardActive)}
-            />
+          <Link to="/admin" className={getNavClass(isDashboardActive)}>
+            <BarChart2 className={getIconClass(isDashboardActive)} />
 
             <span>Thống kê</span>
           </Link>
 
-          <Link
-            to="/admin/content"
-            className={getNavClass(isContentActive)}
-          >
-            <BookOpen
-              className={getIconClass(isContentActive)}
-            />
+          <Link to="/admin/content" className={getNavClass(isContentActive)}>
+            <BookOpen className={getIconClass(isContentActive)} />
 
             <span>Nội dung học</span>
           </Link>
 
-          <Link
-            to="/admin/users"
-            className={getNavClass(isUsersActive)}
-          >
-            <Users
-              className={getIconClass(isUsersActive)}
-            />
+          <Link to="/admin/users" className={getNavClass(isUsersActive)}>
+            <Users className={getIconClass(isUsersActive)} />
 
             <span>Người dùng</span>
           </Link>
@@ -97,14 +83,13 @@ export default function AdminSidebar() {
               Nguyễn Quản Trị
             </h5>
 
-            <p className="text-[10px] text-gray-500">
-              Quản trị viên
-            </p>
+            <p className="text-[10px] text-gray-500">Quản trị viên</p>
           </div>
         </div>
 
         <button
           type="button"
+          onClick={handleLogout}
           className="text-gray-400 hover:text-gray-600 p-1"
         >
           <LogOut className="w-4 h-4" />
