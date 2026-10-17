@@ -1,66 +1,53 @@
 ---
 name: kt-nestjs-module
-description: Create or modify backend features in the K-Tutor NestJS API: modules, controllers, services, DTOs, TypeORM entities, MySQL connection, .env config, CORS. Use when the user asks to add an API endpoint, CRUD, database table or entity, backend config, or to connect the backend to MySQL, even if they don't say NestJS or TypeORM.
+description: Create or modify backend features in the K-Tutor NestJS API (modules, controllers, services, DTOs, TypeORM entities, auth guards and roles, MySQL connection, .env config, CORS). Use when the user asks to add an API endpoint, CRUD, database table or entity, admin-only route, or backend config, even if they don't say NestJS or TypeORM.
 ---
 
-# K-Tutor backend (NestJS + TypeORM + MySQL)
+# K-Tutor backend (NestJS 10 + TypeORM + MySQL)
 
-## Stack
+Code lives in `backend/`. Read `kt-project-context` first for the domain and roadmap.
 
-NestJS 10 (TypeScript), TypeORM + MySQL (`mysql2`), `@nestjs/config` for `.env`, `class-validator` / `class-transformer` for DTOs. Code lives in `backend/`. Backend runs on `PORT` (default 3000), the Vite frontend on 5173.
-
-## API contract first
-
-Read `docs/architecture/api-contract.md` before writing any endpoint. If an endpoint is not in it, propose the change to the user instead of inventing request/response shapes silently. Update the file when a shape changes.
-
-## Folder layout (modeled on F-Corp-OS)
+## What exists
 
 ```
 backend/src/
-├── modules/<feature>/
-│   ├── <feature>.module.ts, .controller.ts, .service.ts
-│   ├── dto/create-<x>.dto.ts, update-<x>.dto.ts
-│   └── entities/<x>.entity.ts
-├── common/        enum/, types/, constants/
-├── core/          transform.interceptor.ts
-├── decorator/     customize.ts (@ResponseMessage, ...)
-└── helper/
+├── modules/
+│   ├── auth/      register, login, /auth/me, JwtStrategy, guard/jwt-auth.guard.ts, guard/roles.guard.ts
+│   ├── users/     User entity (role learner|admin, goal, locked)
+│   └── learning/  entities: level, topic, vocabulary, grammar, example-sentence
+│                  levels.controller.ts / levels.service.ts / dto/  <- reference implementation
+├── core/transform.interceptor.ts
+└── decorator/     customize.ts (@ResponseMessage), roles.decorator.ts (@Roles)
 ```
 
-Use **relative imports**. `tsconfig.json` has `baseUrl: "./"` (the backend root, not `src`), so aliases like `modules/...` do not work here.
-
-## Steps for a new feature module
-
-1. Open an existing module in `modules/` and copy its structure. If none exists, follow the steps below.
-2. Entity: `@Entity('topics')` (snake_case, plural), `@PrimaryGeneratedColumn('uuid')`, explicit `@Column` types, `@CreateDateColumn` / `@UpdateDateColumn`, relations with `@OneToMany` / `@ManyToOne`.
-3. DTOs with `class-validator` decorators. `UpdateXDto = PartialType(CreateXDto)` from `@nestjs/mapped-types`.
-4. Service: `@InjectRepository(Entity)`, throw `NotFoundException` / `BadRequestException`, return plain data (no envelope).
-5. Controller: `@Controller('topics')` (plural, kebab-case), REST routes `GET /`, `GET /:id`, `POST /`, `PATCH /:id`, `DELETE /:id`, `@ResponseMessage('...')` on write endpoints.
-6. Module: `TypeOrmModule.forFeature([Entity])`, then add the module to `AppModule.imports`.
+**For any new CRUD, copy the `levels` files in `modules/learning/` and adapt them.** Do not invent a new style.
 
 ## Conventions
 
-- Global prefix `api` plus URI versioning with default version `1`: `/api/v1/topics`. Do not add `@Version()` to controllers unless a new API version is requested.
-- Every response is `{ statusCode, message, data }`, produced by `TransformInterceptor`. Controllers return plain data.
-- Global `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })`.
-- Secrets only in `backend/.env`, read through `ConfigService`. Variables: `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `PORT`, `FRONTEND_URL`, `GEMINI_API_KEY`. Keep `backend/.env.example` in sync with placeholder values. Never commit `.env`, never print secret values.
-- TypeORM: `TypeOrmModule.forRootAsync` with `ConfigService`, `type: 'mysql'`, `charset: 'utf8mb4'`, `autoLoadEntities: true`, `synchronize` only when `NODE_ENV !== 'production'`.
-- CORS: `enableCors({ origin: FRONTEND_URL, credentials: true })`, default `http://localhost:5173`.
-- Identifiers and API messages in English.
+- URL: global prefix `api` + URI version `1` → `/api/v1/levels`. Controllers use plural kebab-case paths. No `@Version()`.
+- Response envelope `{ statusCode, message, data }` is added by `TransformInterceptor`; controllers and services return plain data. Put `@ResponseMessage('...')` (English) on every handler.
+- Auth: controllers use `@UseGuards(JwtAuthGuard, RolesGuard)`. `GET` is open to any logged-in user; `POST` / `PATCH` / `DELETE` of learning content get `@Roles(UserRole.ADMIN)`.
+- Errors: throw Nest exceptions with an `UPPER_SNAKE` code as message, e.g. `NotFoundException('LEVEL_NOT_FOUND')`, `ConflictException('LEVEL_NAME_EXISTS')`, `ForbiddenException('FORBIDDEN')`. The frontend maps codes to Vietnamese.
+- Route params that are ids: `@Param('id', ParseUUIDPipe)`.
+- DTOs: `class-validator` + `class-transformer`; trim string inputs with `@Transform`. Global `ValidationPipe({ whitelist, forbidNonWhitelisted, transform })` is on. **`@nestjs/mapped-types` is NOT installed**: write `UpdateXDto` by hand with `@IsOptional()` on every field. Do not add the package unless the user asks.
+- Entities: `@Entity('snake_case_plural')`, `@PrimaryGeneratedColumn('uuid')`, explicit column types, `@CreateDateColumn` / `@UpdateDateColumn`. Foreign keys: an explicit `xxxId` column (`varchar(36)`) plus `@ManyToOne(..., { onDelete: 'CASCADE' })` and `@JoinColumn({ name: 'xxxId' })`. Use `sortOrder` for ordering (`order` is a MySQL reserved word). Optional text fields are `nullable: true`.
+- Duplicate-name checks are done in the service with a lookup (`assertNameAvailable(name, ignoreId?)`), not by catching DB errors.
+- Register new entities in the module's `TypeOrmModule.forFeature([...])`; add new modules to `AppModule.imports`. `autoLoadEntities` and `synchronize` (non-production) create tables automatically.
+- Imports are relative (no path aliases).
+- Secrets only in `backend/.env` via `ConfigService`: `DATABASE_*`, `PORT`, `FRONTEND_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `GEMINI_API_KEY`. Keep `.env.example` in sync with placeholders. Never commit `.env`, never print secret values, never write real passwords into code or docs.
 
-## One-time bootstrap (only when the user asks to connect the backend to the database)
+## Steps for a new feature
 
-```powershell
-cd backend
-npm i @nestjs/config @nestjs/typeorm typeorm mysql2 class-validator class-transformer @nestjs/mapped-types
-```
-
-Then: `ConfigModule.forRoot({ isGlobal: true })` and `TypeOrmModule.forRootAsync(...)` in `app.module.ts`; prefix and versioning (`app.setGlobalPrefix('api')`, `app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })`), `ValidationPipe`, interceptor and CORS in `main.ts`; create `backend/.env.example`. Change nothing else. The user must create the database themselves: `CREATE DATABASE k_tutor CHARACTER SET utf8mb4;`
+1. Check `docs/architecture/api-contract.md`; it is partly outdated (see `kt-project-context`). Propose shapes to the user, then update the file in the same task.
+2. Entity (+ register in `forFeature`).
+3. DTOs → service → controller → module → `AppModule`.
+4. Build and test (below), then give the user ready-to-run Postman requests (login at `POST /api/v1/auth/login`, token is `data.accessToken`, send as Bearer).
 
 ## Rules
 
 - Change only what the task requires. Do not touch `frontend/`. Tell the user which packages you add.
 - At the end, list every existing file you modified (new files don't need listing).
+- When the user confirms the work is tested, update the roadmap status in `.agents/skills/kt-project-context/SKILL.md` as described there.
 
 ## Validate before saying done
 
@@ -68,14 +55,14 @@ Then: `ConfigModule.forRoot({ isGlobal: true })` and `TypeOrmModule.forRootAsync
 cd backend
 npm run build
 npm test
+npm run start:dev
 ```
-
-Then start `npm run start:dev` and test the new endpoints with the user (Postman or `curl`).
 
 ## Gotchas
 
 - `npm run lint` runs ESLint with `--fix` and rewrites files. To only check: `npx eslint "{src,test}/**/*.ts"`.
-- Korean text breaks without `utf8mb4`. Set `charset: 'utf8mb4'` in TypeORM and create the database with the same charset.
-- The frontend's `VITE_BACKEND_URL` must include `/api/v1`; endpoint paths in `docs/architecture/api-contract.md` are relative to it.
-- `tsconfig` has `strictNullChecks: false`; don't "fix" this.
+- Error `File '...' is not a module` means the file is empty or was not saved. Check that the file has content and an `export`.
+- Korean text needs `utf8mb4` (already set in TypeORM; the database must use the same charset).
+- Deleting a parent (level, topic) deletes its children through `onDelete: 'CASCADE'`. Warn the admin UI to confirm.
+- `tsconfig` has `strictNullChecks: false`; don't "fix" it.
 - Add a new gotcha here every time you have to correct the AI.

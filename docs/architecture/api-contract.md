@@ -35,28 +35,32 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 
 | Method | Path | Notes | Success `data` |
 |---|---|---|---|
-| GET | `/topics?goal=` | Topics for a goal with the caller's progress | `[{ id, name, description, totalItems, learnedItems }]` |
-| GET | `/topics/:id` | One topic with its items | `{ id, name, description, items: [Item] }` |
-| PUT | `/items/:id/progress` | Body `{ learned: boolean }`, idempotent | `{ itemId, learned }` |
-| GET | `/progress?goal=` | Progress for one goal | `{ learned, total, topics: [{ topicId, name, learned, total }] }` |
+| GET | `/levels` | Available levels, ordered by `sortOrder` | `[Level]` |
+| GET | `/levels/:id` | One level | `Level` |
+| POST | `/levels` | Admin only; body `{ name, description?, sortOrder? }` | `Level` |
+| PATCH | `/levels/:id` | Admin only; partial level fields | `Level` |
+| DELETE | `/levels/:id` | Admin only | `{ id }` |
+| GET | `/topics?levelId=<uuid>` | Logged-in users; required level UUID; ordered by `sortOrder` | `[Topic]` |
+| GET | `/topics/:id` | Logged-in users; one topic | `Topic` |
+| POST | `/topics` | Admin only; body `{ name, levelId, description?, sortOrder? }` | `Topic` |
+| PATCH | `/topics/:id` | Admin only; partial topic fields, optional `levelId` | `Topic` |
+| DELETE | `/topics/:id` | Admin only | `{ id }` |
 
-`Item`:
+`Topic`:
 
 ```json
 {
   "id": "uuid",
-  "type": "vocabulary",
-  "korean": "안녕하세요",
-  "romanization": "annyeonghaseyo",
-  "meaningVi": "Xin chào",
-  "exampleKo": "안녕하세요, 만나서 반가워요.",
-  "exampleVi": "Xin chào, rất vui được gặp bạn.",
-  "audioUrl": null,
-  "learned": false
+  "name": "Chào hỏi",
+  "description": null,
+  "sortOrder": 0,
+  "levelId": "uuid",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z"
 }
 ```
 
-`romanization`, `exampleKo`, `exampleVi`, `audioUrl` are optional. When `audioUrl` is `null` the frontend may fall back to browser speech synthesis (`ko-KR`).
+Topic names must be unique within a level. Creating or moving a topic requires an existing `levelId`; deleting a level cascades to its topics.
 
 ## 4. Vocabulary review
 
@@ -107,18 +111,11 @@ Contradicts the PRD non-goal "open chatbot": needs a PRD revision first.
 
 | Method | Path | Body / query | Success `data` |
 |---|---|---|---|
-| GET | `/admin/topics` | `?include=items` | `[Topic]` with items when requested |
-| POST | `/admin/topics` | `{ name, description?, goal }` | `Topic` |
-| PATCH | `/admin/topics/:id` | partial of the above | `Topic` |
-| DELETE | `/admin/topics/:id` | — | `{ id }` |
-| POST | `/admin/items` | `{ topicId, type, korean, meaningVi, romanization?, exampleKo?, exampleVi?, audioUrl? }` | `Item` |
-| PATCH | `/admin/items/:id` | partial of the above | `Item` |
-| DELETE | `/admin/items/:id` | — | `{ id }` |
 | GET | `/admin/users` | `?current=&pageSize=` | paginated `[{ id, email, goal, locked }]` |
 | PATCH | `/admin/users/:id/lock` | `{ locked: boolean }` | `{ id, locked }` |
 | GET | `/admin/stats` | — | `{ totalUsers, byGoal: { conversation, topik }, topTopics: [{ topicId, name, learners }] }` |
 
-Validation: `korean`, `meaningVi` and `topicId` are required on item create. An item cannot exist without a topic. Deleting a topic with items requires a confirmation step in the frontend. A locked user cannot log in (`403 ACCOUNT_LOCKED`).
+Vocabulary and grammar CRUD contracts will be added when those endpoints are implemented. Learning content endpoints use `/topics` rather than `/admin/topics`; topic create/update/delete are admin-only. Deleting a topic with vocabularies or grammar requires a confirmation step in the frontend. A locked user cannot log in (`403 ACCOUNT_LOCKED`).
 
 ## 10. Decisions to confirm
 
