@@ -1,4 +1,4 @@
-// src/components/topiclist-user/TopicCard.jsx
+// src/components/user/topic-list/TopicCard.jsx
 import React from "react";
 import { RotateCw, Play, ArrowRight } from "lucide-react";
 

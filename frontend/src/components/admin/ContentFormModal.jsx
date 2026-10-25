@@ -1,12 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
-export default function EditContentModal({
-  content,
-  topics,
-  onClose,
-  onSave,
-}) {
+export default function EditContentModal({ content, topics, onClose, onSave }) {
   const [form, setForm] = useState(null);
 
   useEffect(() => {
@@ -38,7 +33,7 @@ export default function EditContentModal({
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
           <div>
             <h2 className="text-lg font-bold text-gray-900">
-              {form.id ? 'Chỉnh sửa nội dung' : 'Thêm nội dung'}
+              {form.id ? "Chỉnh sửa nội dung" : "Thêm nội dung"}
             </h2>
 
             <p className="mt-1 text-xs text-gray-400">
@@ -62,9 +57,7 @@ export default function EditContentModal({
             <Field label="Loại nội dung">
               <select
                 value={form.type}
-                onChange={(e) =>
-                  handleChange('type', e.target.value)
-                }
+                onChange={(e) => handleChange("type", e.target.value)}
                 className={selectClass}
               >
                 <option value="vocabulary">Từ vựng</option>
@@ -74,39 +67,30 @@ export default function EditContentModal({
 
             {/* Từ / Ngữ pháp */}
             <Field
-              label={
-                form.type === 'vocabulary'
-                  ? 'Từ tiếng Hàn'
-                  : 'Ngữ pháp'
-              }
+              label={form.type === "vocabulary" ? "Từ tiếng Hàn" : "Ngữ pháp"}
             >
               <input
                 required
                 type="text"
                 value={form.korean}
-                onChange={(e) =>
-                  handleChange('korean', e.target.value)
-                }
+                onChange={(e) => handleChange("korean", e.target.value)}
                 placeholder={
-                  form.type === 'vocabulary'
-                    ? 'Ví dụ: 주문하다'
-                    : 'Ví dụ: -고 싶다'
+                  form.type === "vocabulary"
+                    ? "Ví dụ: 주문하다"
+                    : "Ví dụ: -고 싶다"
                 }
                 className={inputClass}
               />
             </Field>
 
             {/* Phát âm */}
-            {form.type === 'vocabulary' && (
+            {form.type === "vocabulary" && (
               <Field label="Phát âm">
                 <input
                   type="text"
                   value={form.pronunciation}
                   onChange={(e) =>
-                    handleChange(
-                      'pronunciation',
-                      e.target.value
-                    )
+                    handleChange("pronunciation", e.target.value)
                   }
                   placeholder="Ví dụ: ju-mun-ha-da"
                   className={inputClass}
@@ -117,21 +101,19 @@ export default function EditContentModal({
             {/* Nghĩa */}
             <Field
               label={
-                form.type === 'vocabulary'
-                  ? 'Nghĩa tiếng Việt'
-                  : 'Giải thích tiếng Việt'
+                form.type === "vocabulary"
+                  ? "Nghĩa tiếng Việt"
+                  : "Giải thích tiếng Việt"
               }
             >
               <textarea
                 required
                 value={form.meaning}
-                onChange={(e) =>
-                  handleChange('meaning', e.target.value)
-                }
+                onChange={(e) => handleChange("meaning", e.target.value)}
                 placeholder={
-                  form.type === 'vocabulary'
-                    ? 'Ví dụ: Gọi món'
-                    : 'Ví dụ: Diễn tả mong muốn làm một việc gì đó'
+                  form.type === "vocabulary"
+                    ? "Ví dụ: Gọi món"
+                    : "Ví dụ: Diễn tả mong muốn làm một việc gì đó"
                 }
                 rows={3}
                 className="w-full resize-none rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
@@ -142,9 +124,7 @@ export default function EditContentModal({
             <Field label="Chủ đề">
               <select
                 value={form.topic}
-                onChange={(e) =>
-                  handleChange('topic', e.target.value)
-                }
+                onChange={(e) => handleChange("topic", e.target.value)}
                 className={selectClass}
               >
                 {topics.map((topic) => (
@@ -159,9 +139,7 @@ export default function EditContentModal({
             <Field label="Trạng thái">
               <select
                 value={form.status}
-                onChange={(e) =>
-                  handleChange('status', e.target.value)
-                }
+                onChange={(e) => handleChange("status", e.target.value)}
                 className={selectClass}
               >
                 <option value="active">Đang sử dụng</option>
@@ -184,7 +162,7 @@ export default function EditContentModal({
               type="submit"
               className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-900"
             >
-              {form.id ? 'Lưu thay đổi' : 'Thêm nội dung'}
+              {form.id ? "Lưu thay đổi" : "Thêm nội dung"}
             </button>
           </div>
         </form>
@@ -206,7 +184,7 @@ function Field({ label, children }) {
 }
 
 const inputClass =
-  'h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100';
+  "h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";
 
 const selectClass =
-  'h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100';
+  "h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100";

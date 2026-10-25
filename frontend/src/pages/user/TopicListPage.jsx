@@ -1,10 +1,8 @@
 // src/pages/user/TopicListPage.jsx
 import React from "react";
-import Header from "../../layout/user/Header";
-import Footer from "../../layout/user/Footer";
-import TopicHeader from "../../components/topiclist-user/TopicHeader";
-import TopicCard from "../../components/topiclist-user/TopicCard";
-import LeaderboardStrip from "../../components/topiclist-user/LeaderboardStrip";
+import TopicHeader from "../../components/user/topic-list/TopicHeader";
+import TopicCard from "../../components/user/topic-list/TopicCard";
+import LeaderboardStrip from "../../components/user/topic-list/LeaderboardStrip";
 
 // Dữ liệu mẫu giả lập API trả về
 const TOPIC_DATA = [
@@ -84,35 +82,29 @@ const TOPIC_DATA = [
 
 export default function TopicListPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFB]">
-      <Header />
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-8 flex flex-col">
+      {/* Phần Header của trang danh sách */}
+      <TopicHeader />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-8 flex flex-col">
-        {/* Phần Header của trang danh sách */}
-        <TopicHeader />
+      {/* Danh sách các chủ đề (Grid) */}
+      <div className="mb-6 flex justify-between items-center">
+        <h2 className="text-lg font-bold text-gray-900">Danh sách bộ thẻ</h2>
+        <span className="text-sm text-gray-500">
+          Sắp xếp theo:{" "}
+          <strong className="text-emerald-600 cursor-pointer">
+            Tiến độ học
+          </strong>
+        </span>
+      </div>
 
-        {/* Danh sách các chủ đề (Grid) */}
-        <div className="mb-6 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-gray-900">Danh sách bộ thẻ</h2>
-          <span className="text-sm text-gray-500">
-            Sắp xếp theo:{" "}
-            <strong className="text-emerald-600 cursor-pointer">
-              Tiến độ học
-            </strong>
-          </span>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        {TOPIC_DATA.map((topic) => (
+          <TopicCard key={topic.id} topic={topic} />
+        ))}
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {TOPIC_DATA.map((topic) => (
-            <TopicCard key={topic.id} topic={topic} />
-          ))}
-        </div>
-
-        {/* Banner xếp hạng */}
-        <LeaderboardStrip />
-      </main>
-
-      <Footer />
+      {/* Banner xếp hạng */}
+      <LeaderboardStrip />
     </div>
   );
 }

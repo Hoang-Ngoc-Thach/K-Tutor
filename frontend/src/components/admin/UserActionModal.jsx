@@ -1,13 +1,9 @@
-import { Lock, Unlock, X } from 'lucide-react';
+import { Lock, Unlock, X } from "lucide-react";
 
-export default function UserActionModal({
-  user,
-  onClose,
-  onConfirm,
-}) {
+export default function UserActionModal({ user, onClose, onConfirm }) {
   if (!user) return null;
 
-  const isLocking = user.status === 'active';
+  const isLocking = user.status === "active";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4 backdrop-blur-[2px]">
@@ -19,8 +15,8 @@ export default function UserActionModal({
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-xl ${
               isLocking
-                ? 'bg-red-50 text-red-600'
-                : 'bg-emerald-50 text-emerald-600'
+                ? "bg-red-50 text-red-600"
+                : "bg-emerald-50 text-emerald-600"
             }`}
           >
             {isLocking ? <Lock size={19} /> : <Unlock size={19} />}
@@ -37,9 +33,7 @@ export default function UserActionModal({
 
         <div className="px-6 pb-6 pt-4">
           <h2 className="text-lg font-bold text-slate-900">
-            {isLocking
-              ? 'Khóa tài khoản?'
-              : 'Mở khóa tài khoản?'}
+            {isLocking ? "Khóa tài khoản?" : "Mở khóa tài khoản?"}
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
@@ -49,13 +43,9 @@ export default function UserActionModal({
           </p>
 
           <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3">
-            <p className="text-sm font-semibold text-slate-800">
-              {user.name}
-            </p>
+            <p className="text-sm font-semibold text-slate-800">{user.name}</p>
 
-            <p className="mt-0.5 text-xs text-slate-500">
-              {user.email}
-            </p>
+            <p className="mt-0.5 text-xs text-slate-500">{user.email}</p>
           </div>
         </div>
 
@@ -73,11 +63,11 @@ export default function UserActionModal({
             onClick={onConfirm}
             className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition ${
               isLocking
-                ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-emerald-600 hover:bg-emerald-700'
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-emerald-600 hover:bg-emerald-700"
             }`}
           >
-            {isLocking ? 'Khóa tài khoản' : 'Mở khóa'}
+            {isLocking ? "Khóa tài khoản" : "Mở khóa"}
           </button>
         </div>
       </div>

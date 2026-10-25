@@ -1,11 +1,7 @@
-import React from 'react';
-import { Trash2, X } from 'lucide-react';
+import React from "react";
+import { Trash2, X } from "lucide-react";
 
-export default function DeleteContentModal({
-  content,
-  onClose,
-  onConfirm,
-}) {
+export default function DeleteContentModal({ content, onClose, onConfirm }) {
   if (!content) return null;
 
   return (
@@ -29,11 +25,8 @@ export default function DeleteContentModal({
         </h2>
 
         <p className="mt-2 text-xs leading-5 text-gray-500">
-          Bạn có chắc muốn xóa{' '}
-          <span className="font-semibold text-gray-800">
-            {content.korean}
-          </span>
-          ?
+          Bạn có chắc muốn xóa{" "}
+          <span className="font-semibold text-gray-800">{content.korean}</span>?
         </p>
 
         <div className="mt-5 flex justify-end gap-2">

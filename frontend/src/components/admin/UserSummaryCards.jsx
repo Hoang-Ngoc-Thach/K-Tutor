@@ -1,9 +1,4 @@
-import {
-  Users,
-  CircleCheck,
-  LockKeyhole,
-  BookOpen,
-} from 'lucide-react';
+import { Users, CircleCheck, LockKeyhole, BookOpen } from "lucide-react";
 
 export default function UserSummaryCards({
   totalUsers,
@@ -68,9 +63,7 @@ function SummaryCard({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between">
-        <p className="text-xs font-medium text-slate-500">
-          {title}
-        </p>
+        <p className="text-xs font-medium text-slate-500">{title}</p>
 
         <div
           className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClass}`}
@@ -84,11 +77,9 @@ function SummaryCard({
           {value}
         </p>
 
-        <p className="mt-1 text-[11px] text-slate-400">
-          {description}
-        </p>
+        <p className="mt-1 text-[11px] text-slate-400">{description}</p>
 
-        {typeof progress === 'number' && (
+        {typeof progress === "number" && (
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full bg-emerald-600"

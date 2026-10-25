@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
-import { BarChart2, BookOpen, Users, LogOut } from "lucide-react";
+import { BarChart2, BookOpen, LayoutGrid, Users, LogOut } from "lucide-react";
 
 export default function AdminSidebar() {
   const location = useLocation();
@@ -14,6 +14,7 @@ export default function AdminSidebar() {
   };
 
   const isDashboardActive = location.pathname === "/admin";
+  const isTopicsActive = location.pathname.startsWith("/admin/topics");
   const isContentActive = location.pathname.startsWith("/admin/content");
   const isUsersActive = location.pathname.startsWith("/admin/users");
 
@@ -55,6 +56,12 @@ export default function AdminSidebar() {
             <BarChart2 className={getIconClass(isDashboardActive)} />
 
             <span>Thống kê</span>
+          </Link>
+
+          <Link to="/admin/topics" className={getNavClass(isTopicsActive)}>
+            <LayoutGrid className={getIconClass(isTopicsActive)} />
+
+            <span>Chủ đề</span>
           </Link>
 
           <Link to="/admin/content" className={getNavClass(isContentActive)}>
