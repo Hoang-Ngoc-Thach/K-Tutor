@@ -1,5 +1,5 @@
-import React from 'react';
-import { Users, BookOpen, Type } from 'lucide-react';
+import React from "react";
+import { Users, BookOpen, Type } from "lucide-react";
 
 export default function StatCards() {
   return (
@@ -14,17 +14,25 @@ export default function StatCards() {
             📈 +14.2%
           </span>
         </div>
-        <p className="text-xs font-medium text-gray-500 mb-1">Tổng người dùng</p>
+        <p className="text-xs font-medium text-gray-500 mb-1">
+          Tổng người dùng
+        </p>
         <h3 className="text-2xl font-black text-gray-900 mb-4">24,850</h3>
 
         <div className="bg-gray-50/80 rounded-xl p-2.5 text-xs text-gray-600 flex justify-between">
           <div>
             <span className="text-gray-400">Giao tiếp</span>
-            <p className="font-bold text-gray-800">15,320 <span className="text-[10px] font-normal text-gray-400">62%</span></p>
+            <p className="font-bold text-gray-800">
+              15,320{" "}
+              <span className="text-[10px] font-normal text-gray-400">62%</span>
+            </p>
           </div>
           <div className="border-l border-gray-200 pl-3">
             <span className="text-gray-400">TOPIK</span>
-            <p className="font-bold text-gray-800">9,530 <span className="text-[10px] font-normal text-gray-400">38%</span></p>
+            <p className="font-bold text-gray-800">
+              9,530{" "}
+              <span className="text-[10px] font-normal text-gray-400">38%</span>
+            </p>
           </div>
         </div>
       </div>

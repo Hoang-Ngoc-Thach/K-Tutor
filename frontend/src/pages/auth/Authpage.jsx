@@ -4,9 +4,9 @@ import { getHomePath } from "../../context/authContext";
 import { useAuth } from "../../context/useAuth";
 import Header from "../../layout/user/Header";
 import Footer from "../../layout/user/Footer";
-import HeroSection from "../../components/home-user/HeroSection";
+import HeroSection from "../../components/user/home/HeroSection";
 import LoginForm from "../../components/auth/LoginForm";
-import RegisterForm from "../../components/auth/RegisterForm"; // Import thêm form đăng ký
+import RegisterForm from "../../components/auth/RegisterForm";
 
 export default function LoginPage() {
   // State quản lý việc hiển thị Đăng nhập hay Đăng ký

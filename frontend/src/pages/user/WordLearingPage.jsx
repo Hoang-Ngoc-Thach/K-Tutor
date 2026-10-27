@@ -1,11 +1,11 @@
 import React from "react";
-import LessonHeader from "../../components/topiclearn-user/LessonHeader";
-import WordHeader from "../../components/topiclearn-user/WordHeader";
-import WordDetailsCard from "../../components/topiclearn-user/WordDetailsCard";
-import ExampleCard from "../../components/topiclearn-user/ExampleCard";
-import VoicePractice from "../../components/topiclearn-user/VoicePractice";
-import WordTips from "../../components/topiclearn-user/WordTips";
-import LessonFooter from "../../components/topiclearn-user/LessonFooter";
+import LessonHeader from "../../layout/user/LessonHeader";
+import WordHeader from "../../components/user/topic-learn/WordHeader";
+import WordDetailsCard from "../../components/user/topic-learn/WordDetailsCard";
+import ExampleCard from "../../components/user/topic-learn/ExampleCard";
+import VoicePractice from "../../components/user/topic-learn/VoicePractice";
+import WordTips from "../../components/user/topic-learn/WordTips";
+import LessonFooter from "../../layout/user/LessonFooter";
 import { ArrowRight } from "lucide-react";
 
 export default function WordLearingPage() {

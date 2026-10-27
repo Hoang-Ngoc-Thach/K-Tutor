@@ -7,12 +7,9 @@ import {
   BookOpen,
   BookMarked,
   CheckCircle2,
-} from 'lucide-react';
+} from "lucide-react";
 
-export default function UserDetailModal({
-  user,
-  onClose,
-}) {
+export default function UserDetailModal({ user, onClose }) {
   if (!user) {
     return null;
   }
@@ -24,9 +21,7 @@ export default function UserDetailModal({
     >
       <div
         className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        onClick={(event) =>
-          event.stopPropagation()
-        }
+        onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
@@ -98,22 +93,16 @@ export default function UserDetailModal({
             <InfoItem
               icon={UserRound}
               label="Trạng thái"
-              value={
-                user.status === 'active'
-                  ? 'Hoạt động'
-                  : 'Đã khóa'
-              }
+              value={user.status === "active" ? "Hoạt động" : "Đã khóa"}
               valueClass={
-                user.status === 'active'
-                  ? 'text-emerald-600'
-                  : 'text-red-600'
+                user.status === "active" ? "text-emerald-600" : "text-red-600"
               }
             />
 
             <InfoItem
               icon={BookOpen}
               label="Mã học viên"
-              value={`KT-${String(user.id).padStart(4, '0')}`}
+              value={`KT-${String(user.id).padStart(4, "0")}`}
             />
           </div>
 
@@ -182,12 +171,7 @@ export default function UserDetailModal({
   );
 }
 
-function InfoItem({
-  icon: Icon,
-  label,
-  value,
-  valueClass = 'text-slate-800',
-}) {
+function InfoItem({ icon: Icon, label, value, valueClass = "text-slate-800" }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3">
       <div className="flex items-center gap-2 text-xs text-slate-400">
@@ -195,42 +179,30 @@ function InfoItem({
         {label}
       </div>
 
-      <p
-        className={`mt-2 text-sm font-semibold ${valueClass}`}
-      >
-        {value}
-      </p>
+      <p className={`mt-2 text-sm font-semibold ${valueClass}`}>{value}</p>
     </div>
   );
 }
 
-function StatCard({
-  icon: Icon,
-  value,
-  label,
-}) {
+function StatCard({ icon: Icon, value, label }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
       <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
         <Icon size={16} />
       </div>
 
-      <p className="mt-2 text-lg font-bold text-slate-900">
-        {value}
-      </p>
+      <p className="mt-2 text-lg font-bold text-slate-900">{value}</p>
 
-      <p className="mt-0.5 text-[10px] leading-4 text-slate-500">
-        {label}
-      </p>
+      <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{label}</p>
     </div>
   );
 }
 
 function getInitials(name) {
   return name
-    .split(' ')
+    .split(" ")
     .slice(-2)
     .map((word) => word[0])
-    .join('')
+    .join("")
     .toUpperCase();
 }

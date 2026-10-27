@@ -1,4 +1,4 @@
-// src/components/topiclist-user/LeaderboardStrip.jsx
+// src/components/user/topic-list/LeaderboardStrip.jsx
 import React from "react";
 import { Trophy, ChevronRight } from "lucide-react";
 

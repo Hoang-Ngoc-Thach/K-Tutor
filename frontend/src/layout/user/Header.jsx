@@ -35,9 +35,6 @@ export default function Header() {
             Giới thiệu
           </a>
           <a href="#" className="hover:text-emerald-700">
-            Học tập theo chủ đề
-          </a>
-          <a href="#" className="hover:text-emerald-700">
             TOPIK
           </a>
           <a href="#" className="hover:text-emerald-700">

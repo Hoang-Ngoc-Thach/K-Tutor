@@ -1,4 +1,4 @@
-// src/components/topiclist-user/TopicHeader.jsx
+// src/components/user/topic-list/TopicHeader.jsx
 import React from "react";
 import { Search, Flame, Target } from "lucide-react";
 
