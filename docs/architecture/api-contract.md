@@ -40,11 +40,13 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 | POST | `/levels` | Admin only; body `{ name, description?, sortOrder? }` | `Level` |
 | PATCH | `/levels/:id` | Admin only; partial level fields | `Level` |
 | DELETE | `/levels/:id` | Admin only | `{ id }` |
-| GET | `/topics?levelId=<uuid>` | Logged-in users; required level UUID; ordered by `sortOrder` | `[Topic]` |
+| GET | `/topics?levelId=<uuid>` | Logged-in users; required level UUID; ordered by `sortOrder`; each topic includes `vocabularyCount` and `grammarCount` | `[Topic]` |
 | GET | `/topics/:id` | Logged-in users; one topic | `Topic` |
 | POST | `/topics` | Admin only; body `{ name, levelId, description?, sortOrder? }` | `Topic` |
 | PATCH | `/topics/:id` | Admin only; partial topic fields, optional `levelId` | `Topic` |
 | DELETE | `/topics/:id` | Admin only | `{ id }` |
+| GET | `/vocabularies?topicId=<uuid>` | Logged-in users; required topic UUID; ordered by `sortOrder`, then `createdAt`; each vocabulary includes examples ordered by `createdAt` | `[Vocabulary]` |
+| GET | `/vocabularies/:id` | Logged-in users; one vocabulary with examples ordered by `createdAt` | `Vocabulary` |
 
 `Topic`:
 
@@ -55,12 +57,15 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
   "description": null,
   "sortOrder": 0,
   "levelId": "uuid",
+  "vocabularyCount": 12,
+  "grammarCount": 5,
   "createdAt": "2026-01-01T00:00:00.000Z",
   "updatedAt": "2026-01-01T00:00:00.000Z"
 }
 ```
 
 Topic names must be unique within a level. Creating or moving a topic requires an existing `levelId`; deleting a level cascades to its topics.
+The vocabulary list requires `topicId`; a missing or invalid UUID returns `400`, and a topic that does not exist returns `404 TOPIC_NOT_FOUND`. A missing vocabulary returns `404 VOCABULARY_NOT_FOUND`.
 
 ## 4. Vocabulary review
 

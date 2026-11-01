@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ResponseMessage } from '../../decorator/customize';
@@ -21,6 +23,18 @@ import { VocabulariesService } from './vocabularies.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VocabulariesController {
   constructor(private readonly vocabulariesService: VocabulariesService) {}
+
+  @Get()
+  @ResponseMessage('Get vocabularies successfully')
+  findAllByTopic(@Query('topicId', ParseUUIDPipe) topicId: string) {
+    return this.vocabulariesService.findAllByTopic(topicId);
+  }
+
+  @Get(':id')
+  @ResponseMessage('Get vocabulary successfully')
+  findOneWithExamples(@Param('id', ParseUUIDPipe) id: string) {
+    return this.vocabulariesService.findOneWithExamples(id);
+  }
 
   @Post()
   @Roles(UserRole.ADMIN)

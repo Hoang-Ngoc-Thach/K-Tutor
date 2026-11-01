@@ -23,6 +23,31 @@ export class VocabulariesService {
     return vocabulary;
   }
 
+  async findAllByTopic(topicId: string): Promise<Vocabulary[]> {
+    await this.assertTopicExists(topicId);
+    return this.vocabulariesRepo.find({
+      where: { topicId },
+      relations: { examples: true },
+      order: {
+        sortOrder: 'ASC',
+        createdAt: 'ASC',
+        examples: { createdAt: 'ASC' },
+      },
+    });
+  }
+
+  async findOneWithExamples(id: string): Promise<Vocabulary> {
+    const vocabulary = await this.vocabulariesRepo.findOne({
+      where: { id },
+      relations: { examples: true },
+      order: { examples: { createdAt: 'ASC' } },
+    });
+    if (!vocabulary) {
+      throw new NotFoundException('VOCABULARY_NOT_FOUND');
+    }
+    return vocabulary;
+  }
+
   async create(dto: CreateVocabularyDto): Promise<Vocabulary> {
     await this.assertTopicExists(dto.topicId);
 
