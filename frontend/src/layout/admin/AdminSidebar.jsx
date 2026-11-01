@@ -1,12 +1,19 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/useAuth";
-import { BarChart2, BookOpen, LayoutGrid, Users, LogOut } from "lucide-react";
+import {
+  BarChart2,
+  BookOpen,
+  Layers,
+  LayoutGrid,
+  Users,
+  LogOut,
+} from "lucide-react";
 
 export default function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -14,6 +21,7 @@ export default function AdminSidebar() {
   };
 
   const isDashboardActive = location.pathname === "/admin";
+  const isLevelsActive = location.pathname.startsWith("/admin/levels");
   const isTopicsActive = location.pathname.startsWith("/admin/topics");
   const isContentActive = location.pathname.startsWith("/admin/content");
   const isUsersActive = location.pathname.startsWith("/admin/users");
@@ -58,6 +66,12 @@ export default function AdminSidebar() {
             <span>Thống kê</span>
           </Link>
 
+          <Link to="/admin/levels" className={getNavClass(isLevelsActive)}>
+            <Layers className={getIconClass(isLevelsActive)} />
+
+            <span>Cấp độ</span>
+          </Link>
+
           <Link to="/admin/topics" className={getNavClass(isTopicsActive)}>
             <LayoutGrid className={getIconClass(isTopicsActive)} />
 
@@ -82,12 +96,12 @@ export default function AdminSidebar() {
       <div className="bg-gray-50 p-3 rounded-2xl flex items-center justify-between border border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-emerald-800 text-white font-bold text-xs rounded-full flex items-center justify-center">
-            AD
+            {user?.email?.slice(0, 2).toUpperCase()}
           </div>
 
           <div>
-            <h5 className="text-xs font-bold text-gray-800 leading-tight">
-              Nguyễn Quản Trị
+            <h5 className="max-w-[9rem] truncate text-xs font-bold text-gray-800 leading-tight">
+              {user?.email}
             </h5>
 
             <p className="text-[10px] text-gray-500">Quản trị viên</p>

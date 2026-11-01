@@ -1,15 +1,18 @@
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-import AdminSidebar from '../../layout/admin/AdminSidebar';
+import AdminSidebar from "../../layout/admin/AdminSidebar";
 
-import UserSummaryCards from '../../components/admin/UserSummaryCards';
-import UserDetailModal from '../../components/admin/UserDetailModal';
-import UserActionModal from '../../components/admin/UserActionModal';
+import UserSummaryCards from "../../components/admin/UserSummaryCards";
+import UserDetailModal from "../../components/admin/UserDetailModal";
+import UserActionModal from "../../components/admin/UserActionModal";
+
+import {
+  getGoalLabel,
+  getUserErrorMessage,
+  getUsersRequest,
+  GOAL_LABELS,
+  setUserLockedRequest,
+} from "../../api/users";
 
 import {
   Search,
@@ -18,92 +21,12 @@ import {
   Unlock,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-react';
+} from "lucide-react";
 
-const initialUsers = [
-  {
-    id: 1,
-    name: 'Nguyễn Văn An',
-    email: 'nguyenvanan@gmail.com',
-    goals: ['TOPIK 4', 'Giao tiếp'],
-    status: 'active',
-    progress: 72,
-    joinedAt: '12/09/2026',
-    topicsLearned: 8,
-    vocabularyLearned: 156,
-    lessonsCompleted: 24,
-  },
-  {
-    id: 2,
-    name: 'Trần Thị Mai',
-    email: 'tranthimai@gmail.com',
-    goals: ['TOPIK 3'],
-    status: 'active',
-    progress: 58,
-    joinedAt: '10/09/2026',
-    topicsLearned: 6,
-    vocabularyLearned: 118,
-    lessonsCompleted: 18,
-  },
-  {
-    id: 3,
-    name: 'Lê Minh Đức',
-    email: 'leminhduc@gmail.com',
-    goals: ['Giao tiếp'],
-    status: 'active',
-    progress: 45,
-    joinedAt: '08/09/2026',
-    topicsLearned: 5,
-    vocabularyLearned: 94,
-    lessonsCompleted: 14,
-  },
-  {
-    id: 4,
-    name: 'Phạm Hoàng Nam',
-    email: 'phamhoangnam@gmail.com',
-    goals: ['TOPIK 5'],
-    status: 'locked',
-    progress: 81,
-    joinedAt: '05/09/2026',
-    topicsLearned: 10,
-    vocabularyLearned: 210,
-    lessonsCompleted: 31,
-  },
-  {
-    id: 5,
-    name: 'Nguyễn Thùy Linh',
-    email: 'nguyenthuylinh@gmail.com',
-    goals: ['TOPIK 4', 'Giao tiếp'],
-    status: 'active',
-    progress: 64,
-    joinedAt: '03/09/2026',
-    topicsLearned: 7,
-    vocabularyLearned: 137,
-    lessonsCompleted: 21,
-  },
-  {
-    id: 6,
-    name: 'Đỗ Quốc Huy',
-    email: 'doquochuy@gmail.com',
-    goals: ['TOPIK 3', 'Giao tiếp'],
-    status: 'active',
-    progress: 37,
-    joinedAt: '01/09/2026',
-    topicsLearned: 4,
-    vocabularyLearned: 76,
-    lessonsCompleted: 11,
-  },
-];
+const PAGE_SIZE = 10;
 
-const goalOptions = [
-  'TOPIK 3',
-  'TOPIK 4',
-  'TOPIK 5',
-  'Giao tiếp',
-];
-
-function StatusBadge({ status }) {
-  if (status === 'locked') {
+function StatusBadge({ locked }) {
+  if (locked) {
     return (
       <span className="inline-flex items-center rounded-lg bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700">
         Đã khóa
@@ -121,38 +44,12 @@ function StatusBadge({ status }) {
 function GoalBadge({ goal }) {
   return (
     <span className="inline-flex items-center rounded-lg bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700">
-      {goal}
+      {getGoalLabel(goal)}
     </span>
   );
 }
 
-function ProgressBar({ progress }) {
-  return (
-    <div className="w-28">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-gray-700">
-          {progress}%
-        </span>
-      </div>
-
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-        <div
-          className="h-full rounded-full bg-emerald-700"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function UserActionMenu({
-  user,
-  isOpen,
-  onToggle,
-  onView,
-  onLock,
-  onUnlock,
-}) {
+function UserActionMenu({ user, isOpen, onToggle, onView, onLock, onUnlock }) {
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -161,59 +58,45 @@ function UserActionMenu({
     }
 
     const handleClickOutside = (event) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
         onToggle(null);
       }
     };
 
-    document.addEventListener(
-      'mousedown',
-      handleClickOutside
-    );
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener(
-        'mousedown',
-        handleClickOutside
-      );
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onToggle]);
 
   const handleMenuAction = (action) => {
     onToggle(null);
 
-    if (action === 'view') {
+    if (action === "view") {
       onView(user);
       return;
     }
 
-    if (action === 'lock') {
+    if (action === "lock") {
       onLock(user);
       return;
     }
 
-    if (action === 'unlock') {
+    if (action === "unlock") {
       onUnlock(user);
     }
   };
 
   return (
-    <div
-      ref={menuRef}
-      className="relative"
-    >
+    <div ref={menuRef} className="relative">
       <button
         type="button"
-        onClick={() =>
-          onToggle(isOpen ? null : user.id)
-        }
+        onClick={() => onToggle(isOpen ? null : user.id)}
         className={`rounded-lg p-2 transition ${
           isOpen
-            ? 'bg-gray-100 text-gray-700'
-            : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+            ? "bg-gray-100 text-gray-700"
+            : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
         }`}
         title="Thao tác"
       >
@@ -224,16 +107,16 @@ function UserActionMenu({
         <div className="absolute right-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-xl border border-gray-100 bg-white py-1 shadow-lg">
           <button
             type="button"
-            onClick={() => handleMenuAction('view')}
+            onClick={() => handleMenuAction("view")}
             className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-gray-700 transition hover:bg-gray-50"
           >
             Xem chi tiết
           </button>
 
-          {user.status === 'active' ? (
+          {!user.locked ? (
             <button
               type="button"
-              onClick={() => handleMenuAction('lock')}
+              onClick={() => handleMenuAction("lock")}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-red-600 transition hover:bg-red-50"
             >
               <Lock className="h-3.5 w-3.5" />
@@ -242,9 +125,7 @@ function UserActionMenu({
           ) : (
             <button
               type="button"
-              onClick={() =>
-                handleMenuAction('unlock')
-              }
+              onClick={() => handleMenuAction("unlock")}
               className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs text-emerald-700 transition hover:bg-emerald-50"
             >
               <Unlock className="h-3.5 w-3.5" />
@@ -258,60 +139,78 @@ function UserActionMenu({
 }
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
+  const [meta, setMeta] = useState({
+    current: 1,
+    pageSize: PAGE_SIZE,
+    total: 0,
+  });
+  const [summary, setSummary] = useState({ total: 0, active: 0, locked: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [search, setSearch] = useState('');
-  const [goalFilter, setGoalFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [goalFilter, setGoalFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
 
   const [selectedUser, setSelectedUser] = useState(null);
   const [actionUser, setActionUser] = useState(null);
 
   const [openMenuId, setOpenMenuId] = useState(null);
 
-  const filteredUsers = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+  // Tăng reloadKey để tải lại danh sách sau khi khóa / mở khóa.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadUsers = () => setReloadKey((key) => key + 1);
 
-    return users.filter((user) => {
-      const matchesSearch =
-        !keyword ||
-        user.name.toLowerCase().includes(keyword) ||
-        user.email.toLowerCase().includes(keyword);
+  // Chờ người dùng ngừng gõ rồi mới gửi từ khóa lên backend.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchTerm(search.trim());
+      setPage(1);
+    }, 300);
 
-      const matchesGoal =
-        goalFilter === 'all' ||
-        user.goals.includes(goalFilter);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-      const matchesStatus =
-        statusFilter === 'all' ||
-        user.status === statusFilter;
+  useEffect(() => {
+    let cancelled = false;
 
-      return (
-        matchesSearch &&
-        matchesGoal &&
-        matchesStatus
-      );
-    });
-  }, [
-    users,
-    search,
-    goalFilter,
-    statusFilter,
-  ]);
+    getUsersRequest({
+      current: page,
+      pageSize: PAGE_SIZE,
+      search: searchTerm,
+      goal: goalFilter === "all" ? undefined : goalFilter,
+      locked: statusFilter === "all" ? undefined : statusFilter === "locked",
+    })
+      .then((data) => {
+        if (cancelled) return;
 
-  const totalUsers = users.length;
+        // Trang hiện tại không còn dữ liệu (vừa khóa người cuối cùng của bộ lọc).
+        if (data.items.length === 0 && page > 1) {
+          setPage(page - 1);
+          return;
+        }
 
-  const activeUsers = users.filter(
-    (user) => user.status === 'active'
-  ).length;
+        setUsers(data.items);
+        setMeta(data.meta);
+        setSummary(data.summary);
+        setError("");
+      })
+      .catch((err) => {
+        if (!cancelled) setError(getUserErrorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-  const lockedUsers = users.filter(
-    (user) => user.status === 'locked'
-  ).length;
+    return () => {
+      cancelled = true;
+    };
+  }, [page, searchTerm, goalFilter, statusFilter, reloadKey]);
 
-  const learningUsers = users.filter(
-    (user) => user.progress > 0
-  ).length;
+  const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
 
   const handleViewUser = (user) => {
     setOpenMenuId(null);
@@ -328,28 +227,22 @@ export default function AdminUsers() {
     setActionUser(user);
   };
 
-  const handleConfirmAction = () => {
-    if (!actionUser) {
+  const handleConfirmAction = async () => {
+    const user = actionUser;
+
+    if (!user) {
       return;
     }
 
-    setUsers((currentUsers) =>
-      currentUsers.map((user) => {
-        if (user.id !== actionUser.id) {
-          return user;
-        }
-
-        return {
-          ...user,
-          status:
-            user.status === 'active'
-              ? 'locked'
-              : 'active',
-        };
-      })
-    );
-
+    // Đóng modal ngay để tránh bấm xác nhận hai lần.
     setActionUser(null);
+
+    try {
+      await setUserLockedRequest(user.id, !user.locked);
+      reloadUsers();
+    } catch (err) {
+      setError(getUserErrorMessage(err));
+    }
   };
 
   return (
@@ -359,22 +252,25 @@ export default function AdminUsers() {
       <main className="flex-1 overflow-y-auto p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-gray-900">
-            Người dùng
-          </h1>
+          <h1 className="text-2xl font-black text-gray-900">Người dùng</h1>
 
           <p className="mt-1 text-xs text-gray-500">
-            Quản lý tài khoản và theo dõi hoạt động học tập của học viên.
+            Quản lý tài khoản của học viên.
           </p>
         </div>
 
         {/* Summary Cards */}
         <UserSummaryCards
-          totalUsers={totalUsers}
-          activeUsers={activeUsers}
-          lockedUsers={lockedUsers}
-          learningUsers={learningUsers}
+          totalUsers={summary.total}
+          activeUsers={summary.active}
+          lockedUsers={summary.locked}
         />
+
+        {error && (
+          <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-600">
+            {error}
+          </p>
+        )}
 
         {/* Search & Filters */}
         <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -385,53 +281,42 @@ export default function AdminUsers() {
               <input
                 type="text"
                 value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
-                placeholder="Tìm theo tên hoặc email..."
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm theo email..."
                 className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
 
             <select
               value={goalFilter}
-              onChange={(event) =>
-                setGoalFilter(event.target.value)
-              }
+              onChange={(event) => {
+                setGoalFilter(event.target.value);
+                setPage(1);
+              }}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-emerald-500 lg:w-48"
             >
-              <option value="all">
-                Tất cả mục tiêu
-              </option>
+              <option value="all">Tất cả mục tiêu</option>
 
-              {goalOptions.map((goal) => (
-                <option
-                  key={goal}
-                  value={goal}
-                >
-                  {goal}
+              {Object.entries(GOAL_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
 
             <select
               value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value)
-              }
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setPage(1);
+              }}
               className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-emerald-500 lg:w-44"
             >
-              <option value="all">
-                Tất cả trạng thái
-              </option>
+              <option value="all">Tất cả trạng thái</option>
 
-              <option value="active">
-                Hoạt động
-              </option>
+              <option value="active">Hoạt động</option>
 
-              <option value="locked">
-                Đã khóa
-              </option>
+              <option value="locked">Đã khóa</option>
             </select>
           </div>
         </section>
@@ -455,10 +340,6 @@ export default function AdminUsers() {
                   </th>
 
                   <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                    Tiến độ
-                  </th>
-
-                  <th className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-gray-500">
                     Ngày tham gia
                   </th>
 
@@ -469,12 +350,20 @@ export default function AdminUsers() {
               </thead>
 
               <tbody>
-                {filteredUsers.length === 0 ? (
+                {loading && (
                   <tr>
                     <td
-                      colSpan="6"
-                      className="px-5 py-16 text-center"
+                      colSpan="5"
+                      className="px-5 py-16 text-center text-xs text-gray-400"
                     >
+                      Đang tải...
+                    </td>
+                  </tr>
+                )}
+
+                {!loading && users.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="px-5 py-16 text-center">
                       <p className="text-sm font-semibold text-gray-700">
                         Không tìm thấy học viên
                       </p>
@@ -484,82 +373,58 @@ export default function AdminUsers() {
                       </p>
                     </td>
                   </tr>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50"
-                    >
-                      {/* User */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
-                            {getInitials(user.name)}
-                          </div>
-
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900">
-                              {user.name}
-                            </p>
-
-                            <p className="mt-0.5 text-xs text-gray-500">
-                              {user.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Goals */}
-                      <td className="px-5 py-4">
-                        <div className="flex max-w-56 flex-wrap gap-1.5">
-                          {user.goals.map((goal) => (
-                            <GoalBadge
-                              key={goal}
-                              goal={goal}
-                            />
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-5 py-4">
-                        <StatusBadge
-                          status={user.status}
-                        />
-                      </td>
-
-                      {/* Progress */}
-                      <td className="px-5 py-4">
-                        <ProgressBar
-                          progress={user.progress}
-                        />
-                      </td>
-
-                      {/* Joined */}
-                      <td className="px-5 py-4">
-                        <span className="text-xs text-gray-600">
-                          {user.joinedAt}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-5 py-4">
-                        <div className="flex items-center justify-end">
-                          <UserActionMenu
-                            user={user}
-                            isOpen={
-                              openMenuId === user.id
-                            }
-                            onToggle={setOpenMenuId}
-                            onView={handleViewUser}
-                            onLock={handleLockUser}
-                            onUnlock={handleUnlockUser}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))
                 )}
+
+                {users.map((user) => (
+                  <tr
+                    key={user.id}
+                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50"
+                  >
+                    {/* User */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">
+                          {getInitials(user.email)}
+                        </div>
+
+                        <p className="text-sm font-semibold text-gray-900">
+                          {user.email}
+                        </p>
+                      </div>
+                    </td>
+
+                    {/* Goal */}
+                    <td className="px-5 py-4">
+                      <GoalBadge goal={user.goal} />
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-5 py-4">
+                      <StatusBadge locked={user.locked} />
+                    </td>
+
+                    {/* Joined */}
+                    <td className="px-5 py-4">
+                      <span className="text-xs text-gray-600">
+                        {formatDate(user.createdAt)}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-5 py-4">
+                      <div className="flex items-center justify-end">
+                        <UserActionMenu
+                          user={user}
+                          isOpen={openMenuId === user.id}
+                          onToggle={setOpenMenuId}
+                          onView={handleViewUser}
+                          onLock={handleLockUser}
+                          onUnlock={handleUnlockUser}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -567,39 +432,32 @@ export default function AdminUsers() {
           {/* Pagination */}
           <div className="flex items-center justify-between border-t border-gray-100 px-5 py-4">
             <p className="text-xs text-gray-500">
-              Hiển thị{' '}
+              Hiển thị{" "}
               <span className="font-semibold text-gray-700">
-                {filteredUsers.length}
-              </span>{' '}
-              học viên
+                {users.length}
+              </span>{" "}
+              / {meta.total} học viên
             </p>
 
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                className="rounded-lg border border-gray-200 p-2 text-gray-300"
-                disabled
+                onClick={() => setPage((current) => current - 1)}
+                disabled={page <= 1}
+                className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
 
-              <button
-                type="button"
-                className="h-8 w-8 rounded-lg bg-emerald-800 text-xs font-semibold text-white"
-              >
-                1
-              </button>
+              <span className="px-3 text-xs font-semibold text-gray-700">
+                {page} / {totalPages}
+              </span>
 
               <button
                 type="button"
-                className="h-8 w-8 rounded-lg text-xs text-gray-500 transition hover:bg-gray-50"
-              >
-                2
-              </button>
-
-              <button
-                type="button"
-                className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={page >= totalPages}
+                className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -624,11 +482,10 @@ export default function AdminUsers() {
   );
 }
 
-function getInitials(name) {
-  return name
-    .split(' ')
-    .slice(-2)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
+function getInitials(email) {
+  return email.slice(0, 2).toUpperCase();
+}
+
+function formatDate(value) {
+  return new Date(value).toLocaleDateString("vi-VN");
 }

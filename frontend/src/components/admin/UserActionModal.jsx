@@ -3,7 +3,7 @@ import { Lock, Unlock, X } from "lucide-react";
 export default function UserActionModal({ user, onClose, onConfirm }) {
   if (!user) return null;
 
-  const isLocking = user.status === "active";
+  const isLocking = !user.locked;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 px-4 backdrop-blur-[2px]">
@@ -38,14 +38,12 @@ export default function UserActionModal({ user, onClose, onConfirm }) {
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
             {isLocking
-              ? `Bạn có chắc muốn khóa tài khoản của ${user.name} không?`
-              : `Bạn có chắc muốn mở khóa tài khoản của ${user.name} không?`}
+              ? `Bạn có chắc muốn khóa tài khoản ${user.email} không?`
+              : `Bạn có chắc muốn mở khóa tài khoản ${user.email} không?`}
           </p>
 
           <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3">
-            <p className="text-sm font-semibold text-slate-800">{user.name}</p>
-
-            <p className="mt-0.5 text-xs text-slate-500">{user.email}</p>
+            <p className="text-sm font-semibold text-slate-800">{user.email}</p>
           </div>
         </div>
 

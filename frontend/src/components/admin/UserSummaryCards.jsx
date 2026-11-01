@@ -1,10 +1,9 @@
-import { Users, CircleCheck, LockKeyhole, BookOpen } from "lucide-react";
+import { Users, CircleCheck, LockKeyhole } from "lucide-react";
 
 export default function UserSummaryCards({
   totalUsers,
   activeUsers,
   lockedUsers,
-  learningUsers,
 }) {
   const activePercent = totalUsers
     ? ((activeUsers / totalUsers) * 100).toFixed(1)
@@ -15,7 +14,7 @@ export default function UserSummaryCards({
     : 0;
 
   return (
-    <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
       <SummaryCard
         title="Tổng học viên"
         value={totalUsers}
@@ -39,14 +38,6 @@ export default function UserSummaryCards({
         description={`${lockedPercent}% tổng số`}
         icon={LockKeyhole}
         iconClass="bg-indigo-100 text-indigo-600"
-      />
-
-      <SummaryCard
-        title="Đang học"
-        value={learningUsers}
-        description="Có hoạt động học tập"
-        icon={BookOpen}
-        iconClass="bg-emerald-100 text-emerald-600"
       />
     </div>
   );

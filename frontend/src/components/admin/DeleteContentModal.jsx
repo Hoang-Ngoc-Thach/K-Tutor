@@ -1,7 +1,14 @@
 import React from "react";
 import { Trash2, X } from "lucide-react";
 
-export default function DeleteContentModal({ content, onClose, onConfirm }) {
+export default function DeleteContentModal({
+  content,
+  title = "Xóa nội dung?",
+  label,
+  note,
+  onClose,
+  onConfirm,
+}) {
   if (!content) return null;
 
   return (
@@ -20,14 +27,17 @@ export default function DeleteContentModal({ content, onClose, onConfirm }) {
           </button>
         </div>
 
-        <h2 className="mt-4 text-base font-bold text-gray-900">
-          Xóa nội dung?
-        </h2>
+        <h2 className="mt-4 text-base font-bold text-gray-900">{title}</h2>
 
         <p className="mt-2 text-xs leading-5 text-gray-500">
           Bạn có chắc muốn xóa{" "}
-          <span className="font-semibold text-gray-800">{content.korean}</span>?
+          <span className="font-semibold text-gray-800">
+            {label ?? content.korean}
+          </span>
+          ?
         </p>
+
+        {note && <p className="mt-2 text-xs leading-5 text-red-600">{note}</p>}
 
         <div className="mt-5 flex justify-end gap-2">
           <button

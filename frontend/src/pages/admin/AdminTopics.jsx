@@ -1,121 +1,65 @@
-import React, { useMemo, useState } from 'react';
-import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
 
-import AdminSidebar from '../../layout/admin/AdminSidebar';
-import TopicFormModal from '../../components/admin/TopicFormModal';
-import DeleteContentModal from '../../components/admin/DeleteContentModal';
-
-const categories = [
-  'Đời sống hàng ngày',
-  'Ẩm thực & Mua sắm',
-  'Du lịch & Sân bay',
-  'Công sở & Giao tiếp',
-  'K-Drama & Giải trí',
-  'TOPIK I-II',
-];
-
-const initialTopics = [
-  {
-    id: 1,
-    emoji: '🍎',
-    title: 'Trái cây & Hoa quả',
-    subtitle: '과일 (gwail)',
-    category: 'Đời sống hàng ngày',
-    wordCount: 32,
-    isNew: false,
-    status: 'active',
-  },
-  {
-    id: 2,
-    emoji: '🍲',
-    title: 'Ẩm thực & Món ăn',
-    subtitle: '음식 & 요리 (eumsik)',
-    category: 'Ẩm thực & Mua sắm',
-    wordCount: 50,
-    isNew: false,
-    status: 'active',
-  },
-  {
-    id: 3,
-    emoji: '✈️',
-    title: 'Sân bay & Du lịch',
-    subtitle: '공항 & 여행 (gonghang)',
-    category: 'Du lịch & Sân bay',
-    wordCount: 45,
-    isNew: false,
-    status: 'active',
-  },
-  {
-    id: 4,
-    emoji: '👨‍👩‍👧‍👦',
-    title: 'Gia đình & Quan hệ',
-    subtitle: '가족 & 관계 (gajok)',
-    category: 'Đời sống hàng ngày',
-    wordCount: 28,
-    isNew: false,
-    status: 'active',
-  },
-  {
-    id: 5,
-    emoji: '🌤️',
-    title: 'Thời tiết & Bốn mùa',
-    subtitle: '날씨 & 계절 (nalssi)',
-    category: 'Đời sống hàng ngày',
-    wordCount: 25,
-    isNew: false,
-    status: 'active',
-  },
-  {
-    id: 6,
-    emoji: '☕',
-    title: 'Cà phê & Gọi món',
-    subtitle: '카페 & 주문 (kape)',
-    category: 'Ẩm thực & Mua sắm',
-    wordCount: 35,
-    isNew: true,
-    status: 'active',
-  },
-  {
-    id: 7,
-    emoji: '🏥',
-    title: 'Bệnh viện & Sức khỏe',
-    subtitle: '병원 & 건강 (byeongwon)',
-    category: 'Đời sống hàng ngày',
-    wordCount: 38,
-    isNew: false,
-    status: 'active',
-  },
-  {
-    id: 8,
-    emoji: '🚇',
-    title: 'Giao thông & Đi lại',
-    subtitle: '교통 & 지하철 (gyotong)',
-    category: 'Du lịch & Sân bay',
-    wordCount: 40,
-    isNew: false,
-    status: 'active',
-  },
-];
-
-const emptyTopic = {
-  emoji: '',
-  title: '',
-  subtitle: '',
-  category: categories[0],
-  wordCount: 20,
-  isNew: true,
-  status: 'active',
-};
+import AdminSidebar from "../../layout/admin/AdminSidebar";
+import TopicFormModal from "../../components/admin/TopicFormModal";
+import DeleteContentModal from "../../components/admin/DeleteContentModal";
+import { getLevelsRequest } from "../../api/levels";
+import {
+  createTopicRequest,
+  deleteTopicRequest,
+  getTopicErrorMessage,
+  getTopicsRequest,
+  updateTopicRequest,
+} from "../../api/topics";
 
 export default function AdminTopics() {
-  const [topics, setTopics] = useState(initialTopics);
+  const [levels, setLevels] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
 
   const [editingTopic, setEditingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
+
+  // Tăng reloadKey để tải lại danh sách sau khi thêm / sửa / xóa.
+  const [reloadKey, setReloadKey] = useState(0);
+  const reloadTopics = () => setReloadKey((key) => key + 1);
+
+  // GET /topics cần levelId, nên lấy levels trước rồi lấy topics của từng level.
+  useEffect(() => {
+    let cancelled = false;
+
+    getLevelsRequest()
+      .then(async (levelList) => {
+        const topicLists = await Promise.all(
+          levelList.map((level) => getTopicsRequest(level.id)),
+        );
+        if (cancelled) return;
+        setLevels(levelList);
+        setTopics(topicLists.flat());
+        setError("");
+      })
+      .catch((err) => {
+        if (!cancelled) setError(getTopicErrorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  const levelNameById = useMemo(
+    () => Object.fromEntries(levels.map((level) => [level.id, level.name])),
+    [levels],
+  );
 
   const filteredTopics = useMemo(() => {
     const keyword = search.toLowerCase().trim();
@@ -123,59 +67,50 @@ export default function AdminTopics() {
     return topics.filter((topic) => {
       const matchesSearch =
         !keyword ||
-        topic.title.toLowerCase().includes(keyword) ||
-        topic.subtitle.toLowerCase().includes(keyword);
+        topic.name.toLowerCase().includes(keyword) ||
+        (topic.description ?? "").toLowerCase().includes(keyword);
 
-      const matchesCategory =
-        categoryFilter === 'all' ||
-        topic.category === categoryFilter;
+      const matchesLevel =
+        levelFilter === "all" || topic.levelId === levelFilter;
 
-      const matchesStatus =
-        statusFilter === 'all' || topic.status === statusFilter;
-
-      return matchesSearch && matchesCategory && matchesStatus;
+      return matchesSearch && matchesLevel;
     });
-  }, [topics, search, categoryFilter, statusFilter]);
+  }, [topics, search, levelFilter]);
 
-  const activeCount = topics.filter(
-    (topic) => topic.status === 'active'
-  ).length;
+  const handleAddTopic = () => {
+    const levelId = levelFilter !== "all" ? levelFilter : levels[0].id;
 
-  const inactiveCount = topics.length - activeCount;
+    setEditingTopic({
+      name: "",
+      description: "",
+      levelId,
+      sortOrder: topics.filter((topic) => topic.levelId === levelId).length,
+    });
+  };
 
-  // Tên đã có (trừ chính chủ đề đang sửa) để chặn thêm trùng
-  const takenTitles = editingTopic
-    ? topics
-        .filter((topic) => topic.id !== editingTopic.id)
-        .map((topic) => topic.title.toLowerCase())
-    : [];
-
-  const handleSaveTopic = (savedTopic) => {
-    if (savedTopic.id) {
-      setTopics((prev) =>
-        prev.map((topic) =>
-          topic.id === savedTopic.id ? savedTopic : topic
-        )
-      );
+  // Ném lỗi ra ngoài để TopicFormModal hiển thị ngay trong modal.
+  const handleSaveTopic = async ({ id, ...body }) => {
+    if (id) {
+      await updateTopicRequest(id, body);
     } else {
-      setTopics((prev) => [
-        {
-          ...savedTopic,
-          id: Date.now(),
-        },
-        ...prev,
-      ]);
+      await createTopicRequest(body);
     }
 
     setEditingTopic(null);
+    reloadTopics();
   };
 
-  const handleDeleteTopic = () => {
-    setTopics((prev) =>
-      prev.filter((topic) => topic.id !== deletingTopic.id)
-    );
-
+  const handleDeleteTopic = async () => {
+    const topic = deletingTopic;
+    // Đóng modal ngay để tránh bấm xóa hai lần.
     setDeletingTopic(null);
+
+    try {
+      await deleteTopicRequest(topic.id);
+      reloadTopics();
+    } catch (err) {
+      setError(getTopicErrorMessage(err));
+    }
   };
 
   return (
@@ -191,19 +126,35 @@ export default function AdminTopics() {
             </h1>
 
             <p className="mt-1 text-xs text-gray-500">
-              Thêm và chỉnh sửa các chủ đề từ vựng hiển thị cho học
-              viên
+              Thêm và chỉnh sửa các chủ đề học thuộc từng cấp độ
             </p>
           </div>
 
           <button
-            onClick={() => setEditingTopic(emptyTopic)}
-            className="flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900"
+            onClick={handleAddTopic}
+            disabled={levels.length === 0}
+            className="flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             Thêm chủ đề
           </button>
         </div>
+
+        {error && (
+          <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-600">
+            {error}
+          </p>
+        )}
+
+        {!loading && levels.length === 0 && !error && (
+          <p className="mb-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            Chưa có cấp độ nào. Hãy{" "}
+            <Link to="/admin/levels" className="font-semibold underline">
+              tạo cấp độ
+            </Link>{" "}
+            trước khi thêm chủ đề.
+          </p>
+        )}
 
         {/* Content */}
         <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -222,54 +173,26 @@ export default function AdminTopics() {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Status */}
-                <div className="flex overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-0.5">
-                  {[
-                    ['all', 'Tất cả', topics.length],
-                    ['active', 'Đang hiển thị', activeCount],
-                    ['inactive', 'Tạm ẩn', inactiveCount],
-                  ].map(([value, label, count]) => (
-                    <button
-                      key={value}
-                      onClick={() => setStatusFilter(value)}
-                      className={`rounded-lg px-3 py-2 text-[11px] font-semibold ${
-                        statusFilter === value
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-500'
-                      }`}
-                    >
-                      {label}
-                      <span className="ml-1.5 text-gray-400">
-                        {count}
-                      </span>
-                    </button>
-                  ))}
-                </div>
+              {/* Level */}
+              <select
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value)}
+                className="h-10 rounded-xl border border-gray-200 px-3 text-[11px] text-gray-600 outline-none focus:border-emerald-500"
+              >
+                <option value="all">Tất cả cấp độ</option>
 
-                {/* Category */}
-                <select
-                  value={categoryFilter}
-                  onChange={(e) =>
-                    setCategoryFilter(e.target.value)
-                  }
-                  className="h-10 rounded-xl border border-gray-200 px-3 text-[11px] text-gray-600 outline-none focus:border-emerald-500"
-                >
-                  <option value="all">Tất cả danh mục</option>
-
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {levels.map((level) => (
+                  <option key={level.id} value={level.id}>
+                    {level.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
                   <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-gray-400">
@@ -277,15 +200,11 @@ export default function AdminTopics() {
                   </th>
 
                   <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-gray-400">
-                    Danh mục
+                    Cấp độ
                   </th>
 
                   <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-gray-400">
-                    Số từ
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-[10px] font-bold uppercase text-gray-400">
-                    Trạng thái
+                    Thứ tự
                   </th>
 
                   <th className="px-4 py-3 text-right text-[10px] font-bold uppercase text-gray-400">
@@ -295,13 +214,26 @@ export default function AdminTopics() {
               </thead>
 
               <tbody>
-                {filteredTopics.length === 0 && (
+                {loading && (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-4 py-10 text-center text-xs text-gray-400"
                     >
-                      Không tìm thấy chủ đề phù hợp
+                      Đang tải...
+                    </td>
+                  </tr>
+                )}
+
+                {!loading && filteredTopics.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-10 text-center text-xs text-gray-400"
+                    >
+                      {topics.length === 0
+                        ? "Chưa có chủ đề nào"
+                        : "Không tìm thấy chủ đề phù hợp"}
                     </td>
                   </tr>
                 )}
@@ -312,53 +244,25 @@ export default function AdminTopics() {
                     className="border-b border-gray-100 hover:bg-gray-50/70"
                   >
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-xl">
-                          {topic.emoji}
-                        </div>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-900">
-                              {topic.title}
-                            </span>
-
-                            {topic.isNew && (
-                              <span className="rounded-md border border-purple-100 bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold text-purple-700">
-                                Mới
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="text-[10px] text-gray-400">
-                            {topic.subtitle}
-                          </div>
-                        </div>
+                      <div className="text-sm font-bold text-gray-900">
+                        {topic.name}
                       </div>
+
+                      {topic.description && (
+                        <div className="mt-0.5 max-w-md text-[10px] text-gray-400">
+                          {topic.description}
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-4 py-3.5">
                       <span className="rounded-md bg-indigo-50 px-2 py-1 text-[9px] font-semibold text-indigo-700">
-                        {topic.category}
+                        {levelNameById[topic.levelId]}
                       </span>
                     </td>
 
                     <td className="px-4 py-3.5 text-xs text-gray-700">
-                      {topic.wordCount} từ
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      {topic.status === 'active' ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                          Đang hiển thị
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[9px] font-bold text-gray-500">
-                          <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
-                          Tạm ẩn
-                        </span>
-                      )}
+                      {topic.sortOrder}
                     </td>
 
                     <td className="px-4 py-3.5">
@@ -387,8 +291,7 @@ export default function AdminTopics() {
           {/* Footer */}
           <div className="border-t border-gray-100 px-4 py-3">
             <span className="text-[10px] text-gray-400">
-              Hiển thị {filteredTopics.length} / {topics.length} chủ
-              đề
+              Hiển thị {filteredTopics.length} / {topics.length} chủ đề
             </span>
           </div>
         </section>
@@ -398,8 +301,7 @@ export default function AdminTopics() {
       {editingTopic && (
         <TopicFormModal
           topic={editingTopic}
-          categories={categories}
-          takenTitles={takenTitles}
+          levels={levels}
           onClose={() => setEditingTopic(null)}
           onSave={handleSaveTopic}
         />
@@ -409,7 +311,8 @@ export default function AdminTopics() {
       <DeleteContentModal
         content={deletingTopic}
         title="Xóa chủ đề?"
-        label={deletingTopic?.title}
+        label={deletingTopic?.name}
+        note="Từ vựng và ngữ pháp thuộc chủ đề này cũng sẽ bị xóa."
         onClose={() => setDeletingTopic(null)}
         onConfirm={handleDeleteTopic}
       />

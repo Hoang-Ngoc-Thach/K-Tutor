@@ -1,10 +1,30 @@
-import React from 'react';
-import AdminSidebar from '../../layout/admin/AdminSidebar';
-import StatCards from '../../components/admin/StatCards';
-import TopTopics from '../../components/admin/TopTopics';
-import { Bell, Download, Filter } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import AdminSidebar from "../../layout/admin/AdminSidebar";
+import StatCards from "../../components/admin/StatCards";
+import TopTopics from "../../components/admin/TopTopics";
+import { getStatsErrorMessage, getStatsRequest } from "../../api/stats";
+import { Bell, Download, Filter } from "lucide-react";
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getStatsRequest()
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(getStatsErrorMessage(err));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="flex bg-gray-50/60 min-h-screen">
       <AdminSidebar activePage="dashboard" />
@@ -24,7 +44,8 @@ export default function AdminDashboard() {
             </div>
 
             <p className="text-xs text-gray-500 mt-1">
-              Chào mừng trở lại, xem hiệu suất học tập và tăng trưởng của K-Tutor hôm nay.
+              Chào mừng trở lại, xem hiệu suất học tập và tăng trưởng của
+              K-Tutor hôm nay.
             </p>
           </div>
 
@@ -62,8 +83,22 @@ export default function AdminDashboard() {
 
         {/* Dashboard Content */}
         <div className="space-y-6">
-          <StatCards />
-          <TopTopics />
+          {error && (
+            <p className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-600">
+              {error}
+            </p>
+          )}
+
+          {!stats && !error && (
+            <p className="text-xs text-gray-400">Đang tải...</p>
+          )}
+
+          {stats && (
+            <>
+              <StatCards stats={stats} />
+              <TopTopics levels={stats.topicsByLevel} />
+            </>
+          )}
         </div>
       </main>
     </div>

@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { X } from "lucide-react";
+import { getContentErrorMessage } from "../../api/contents";
 
+// Render có điều kiện từ trang cha ({content && <ContentFormModal ... />})
+// nên state form luôn được khởi tạo lại mỗi lần mở.
+// topics: [{ id, label }]. onSave phải trả về Promise; nếu ném lỗi,
+// modal giữ nguyên và hiện thông báo.
 export default function EditContentModal({ content, topics, onClose, onSave }) {
-  const [form, setForm] = useState(null);
-
-  useEffect(() => {
-    if (content) {
-      setForm({
-        ...content,
-      });
-    }
-  }, [content]);
-
-  if (!content || !form) return null;
+  const [form, setForm] = useState(() => ({
+    ...content,
+    pronunciation: content.pronunciation ?? "",
+  }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (field, value) => {
     setForm((prev) => ({
@@ -21,9 +21,26 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(form);
+    if (saving) return;
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await onSave({
+        id: form.id,
+        type: form.type,
+        korean: form.korean.trim(),
+        pronunciation: form.pronunciation.trim(),
+        meaning: form.meaning.trim(),
+        topicId: form.topicId,
+      });
+    } catch (err) {
+      setError(getContentErrorMessage(err));
+      setSaving(false);
+    }
   };
 
   return (
@@ -53,12 +70,13 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="space-y-5 px-6 py-5">
-            {/* Loại nội dung */}
+            {/* Loại nội dung (từ vựng và ngữ pháp nằm ở hai bảng nên không đổi loại khi sửa) */}
             <Field label="Loại nội dung">
               <select
                 value={form.type}
+                disabled={Boolean(form.id)}
                 onChange={(e) => handleChange("type", e.target.value)}
-                className={selectClass}
+                className={`${selectClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500`}
               >
                 <option value="vocabulary">Từ vựng</option>
                 <option value="grammar">Ngữ pháp</option>
@@ -72,6 +90,7 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
               <input
                 required
                 type="text"
+                maxLength={255}
                 value={form.korean}
                 onChange={(e) => handleChange("korean", e.target.value)}
                 placeholder={
@@ -88,6 +107,7 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
               <Field label="Phát âm">
                 <input
                   type="text"
+                  maxLength={255}
                   value={form.pronunciation}
                   onChange={(e) =>
                     handleChange("pronunciation", e.target.value)
@@ -108,6 +128,7 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
             >
               <textarea
                 required
+                maxLength={form.type === "vocabulary" ? 500 : 20000}
                 value={form.meaning}
                 onChange={(e) => handleChange("meaning", e.target.value)}
                 placeholder={
@@ -123,29 +144,20 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
             {/* Chủ đề */}
             <Field label="Chủ đề">
               <select
-                value={form.topic}
-                onChange={(e) => handleChange("topic", e.target.value)}
+                required
+                value={form.topicId}
+                onChange={(e) => handleChange("topicId", e.target.value)}
                 className={selectClass}
               >
                 {topics.map((topic) => (
-                  <option key={topic} value={topic}>
-                    {topic}
+                  <option key={topic.id} value={topic.id}>
+                    {topic.label}
                   </option>
                 ))}
               </select>
             </Field>
 
-            {/* Trạng thái */}
-            <Field label="Trạng thái">
-              <select
-                value={form.status}
-                onChange={(e) => handleChange("status", e.target.value)}
-                className={selectClass}
-              >
-                <option value="active">Đang sử dụng</option>
-                <option value="inactive">Tạm ẩn</option>
-              </select>
-            </Field>
+            {error && <p className="text-xs text-red-600">{error}</p>}
           </div>
 
           {/* Footer */}
@@ -160,9 +172,14 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
 
             <button
               type="submit"
-              className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-900"
+              disabled={saving}
+              className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {form.id ? "Lưu thay đổi" : "Thêm nội dung"}
+              {saving
+                ? "Đang lưu..."
+                : form.id
+                  ? "Lưu thay đổi"
+                  : "Thêm nội dung"}
             </button>
           </div>
         </form>

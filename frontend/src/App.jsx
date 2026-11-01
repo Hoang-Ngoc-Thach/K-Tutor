@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminTopics from "./pages/admin/AdminTopics";
+import AdminLevels from "./pages/admin/AdminLevels";
 
 export default function App() {
   return (
@@ -55,6 +56,14 @@ export default function App() {
           />
 
           {/* Admin routes */}
+          <Route
+            path="/admin/levels"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLevels />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/topics"
             element={
