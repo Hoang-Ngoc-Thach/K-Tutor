@@ -1,32 +1,99 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { Plus, Trash2, X } from "lucide-react";
 import { getContentErrorMessage } from "../../api/contents";
 
 // Render có điều kiện từ trang cha ({content && <ContentFormModal ... />})
 // nên state form luôn được khởi tạo lại mỗi lần mở.
 // topics: [{ id, label }]. onSave phải trả về Promise; nếu ném lỗi,
 // modal giữ nguyên và hiện thông báo.
-export default function EditContentModal({ content, topics, onClose, onSave }) {
+export default function EditContentModal({
+  content,
+  topics,
+  loading = false,
+  loadError = "",
+  onClose,
+  onSave,
+}) {
   const [form, setForm] = useState(() => ({
     ...content,
     pronunciation: content.pronunciation ?? "",
+    examples:
+      content.type === "grammar"
+        ? content.examples?.length
+          ? content.examples.map(({ korean, meaning }) => ({ korean, meaning }))
+          : [{ korean: "", meaning: "" }]
+        : [],
   }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [examplesError, setExamplesError] = useState("");
 
   const handleChange = (field, value) => {
     setForm((prev) => ({
       ...prev,
       [field]: value,
+      ...(field === "type" && value === "grammar" && !prev.examples?.length
+        ? { examples: [{ korean: "", meaning: "" }] }
+        : {}),
     }));
+  };
+
+  const handleExampleChange = (index, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      examples: prev.examples.map((example, exampleIndex) =>
+        exampleIndex === index
+          ? { ...example, [field]: value }
+          : example,
+      ),
+    }));
+    setExamplesError("");
+  };
+
+  const addExample = () => {
+    setForm((prev) => ({
+      ...prev,
+      examples: [...prev.examples, { korean: "", meaning: "" }],
+    }));
+    setExamplesError("");
+  };
+
+  const removeExample = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      examples: prev.examples.filter(
+        (_example, exampleIndex) => exampleIndex !== index,
+      ),
+    }));
+    setExamplesError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (saving) return;
+    if (saving || loading || loadError) return;
+
+    const examples =
+      form.type === "grammar"
+        ? form.examples.map((example) => ({
+            korean: example.korean.trim(),
+            meaning: example.meaning.trim(),
+          }))
+        : undefined;
+    if (
+      form.type === "grammar" &&
+      (!examples?.length ||
+        examples.length > 20 ||
+        examples.some((example) => !example.korean || !example.meaning))
+    ) {
+      setExamplesError(
+        "Vui lòng điền đầy đủ câu tiếng Hàn và nghĩa tiếng Việt cho mỗi ví dụ.",
+      );
+      return;
+    }
 
     setSaving(true);
     setError("");
+    setExamplesError("");
 
     try {
       await onSave({
@@ -36,6 +103,7 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
         pronunciation: form.pronunciation.trim(),
         meaning: form.meaning.trim(),
         topicId: form.topicId,
+        ...(examples !== undefined ? { examples } : {}),
       });
     } catch (err) {
       setError(getContentErrorMessage(err));
@@ -69,7 +137,15 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div className="space-y-5 px-6 py-5">
+          <div className="max-h-[calc(100vh-180px)] space-y-5 overflow-y-auto px-6 py-5">
+            {loading && (
+              <p className="text-xs font-medium text-gray-500">Đang tải...</p>
+            )}
+            {loadError && (
+              <p role="alert" className="text-xs text-red-600">
+                {loadError}
+              </p>
+            )}
             {/* Loại nội dung (từ vựng và ngữ pháp nằm ở hai bảng nên không đổi loại khi sửa) */}
             <Field label="Loại nội dung">
               <select
@@ -141,6 +217,89 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
               />
             </Field>
 
+            {form.type === "grammar" && (
+              <Field label="Ví dụ">
+                <div className="space-y-3">
+                  {form.examples.map((example, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-gray-200 bg-gray-50/60 p-3"
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-gray-600">
+                          Ví dụ {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeExample(index)}
+                          disabled={form.examples.length === 1}
+                          aria-label={`Xóa ví dụ ${index + 1}`}
+                          className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1.5 block text-[10px] font-medium text-gray-600">
+                            Câu tiếng Hàn
+                          </span>
+                          <input
+                            type="text"
+                            maxLength={500}
+                            value={example.korean}
+                            onChange={(event) =>
+                              handleExampleChange(
+                                index,
+                                "korean",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Nhập câu tiếng Hàn"
+                            className={inputClass}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="mb-1.5 block text-[10px] font-medium text-gray-600">
+                            Nghĩa tiếng Việt
+                          </span>
+                          <input
+                            type="text"
+                            maxLength={500}
+                            value={example.meaning}
+                            onChange={(event) =>
+                              handleExampleChange(
+                                index,
+                                "meaning",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Nhập nghĩa tiếng Việt"
+                            className={inputClass}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={addExample}
+                    disabled={form.examples.length >= 20}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Thêm ví dụ
+                  </button>
+                  {examplesError && (
+                    <p role="alert" className="text-xs text-red-600">
+                      {examplesError}
+                    </p>
+                  )}
+                </div>
+              </Field>
+            )}
+
             {/* Chủ đề */}
             <Field label="Chủ đề">
               <select
@@ -172,7 +331,7 @@ export default function EditContentModal({ content, topics, onClose, onSave }) {
 
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || loading || Boolean(loadError)}
               className="rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving

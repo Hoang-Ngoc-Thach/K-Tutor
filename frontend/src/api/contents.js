@@ -20,6 +20,10 @@ export function getContentsRequest({
   return apiFetch(`/admin/contents?${params.toString()}`);
 }
 
+export function getGrammarRequest(id) {
+  return apiFetch(`/grammars/${id}`);
+}
+
 function getResource(type) {
   return type === "vocabulary" ? "vocabularies" : "grammars";
 }
@@ -33,11 +37,24 @@ export function saveContentRequest({
   pronunciation,
   meaning,
   topicId,
+  examples,
 }) {
   const body =
     type === "vocabulary"
       ? { korean, meaning, pronunciation, topicId }
-      : { title: korean, content: meaning, topicId };
+      : {
+          title: korean,
+          content: meaning,
+          topicId,
+          ...(examples !== undefined
+            ? {
+                examples: examples.map((example) => ({
+                  korean: example.korean.trim(),
+                  meaning: example.meaning.trim(),
+                })),
+              }
+            : {}),
+        };
   const path = `/${getResource(type)}`;
 
   return id

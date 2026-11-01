@@ -47,6 +47,11 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 | DELETE | `/topics/:id` | Admin only | `{ id }` |
 | GET | `/vocabularies?topicId=<uuid>` | Logged-in users; required topic UUID; ordered by `sortOrder`, then `createdAt`; each vocabulary includes examples ordered by `createdAt` | `[Vocabulary]` |
 | GET | `/vocabularies/:id` | Logged-in users; one vocabulary with examples ordered by `createdAt` | `Vocabulary` |
+| GET | `/grammars?topicId=<uuid>` | Logged-in users; required topic UUID; ordered by `sortOrder`, then `createdAt`; each grammar includes examples ordered by `sortOrder`, then `createdAt` | `[Grammar]` |
+| GET | `/grammars/:id` | Logged-in users; one grammar with examples | `Grammar` |
+| POST | `/grammars` | Admin only; body `{ title, content, topicId, sortOrder?, examples: [{ korean, meaning }] }`; examples required, 1–20 | `Grammar` with `examples` |
+| PATCH | `/grammars/:id` | Admin only; partial grammar fields; optional `examples` replaces all existing examples (1–20 when supplied) | `Grammar` with `examples` |
+| DELETE | `/grammars/:id` | Admin only; deleting a grammar cascades to its examples | `{ id }` |
 
 `Topic`:
 
@@ -66,6 +71,33 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 
 Topic names must be unique within a level. Creating or moving a topic requires an existing `levelId`; deleting a level cascades to its topics.
 The vocabulary list requires `topicId`; a missing or invalid UUID returns `400`, and a topic that does not exist returns `404 TOPIC_NOT_FOUND`. A missing vocabulary returns `404 VOCABULARY_NOT_FOUND`.
+Grammar examples require non-empty `korean` and `meaning` strings of at most 500 characters; both values are trimmed. Examples are stored with `grammarId`, `vocabularyId: null`, and `sortOrder` matching their array position. Grammar creation and example creation, as well as grammar updates and example replacement, each run in a single transaction. Omitting `examples` in a PATCH leaves existing examples unchanged. The grammar list requires `topicId`; a missing or invalid UUID returns `400`, and an unknown topic returns `404 TOPIC_NOT_FOUND`. An unknown grammar returns `404 GRAMMAR_NOT_FOUND`.
+
+`Grammar` response example:
+
+```json
+{
+  "id": "uuid",
+  "title": "N + 이에요/예요",
+  "content": "<p>Giới thiệu danh từ.</p>",
+  "sortOrder": 0,
+  "topicId": "uuid",
+  "examples": [
+    {
+      "id": "uuid",
+      "korean": "저는 학생이에요.",
+      "meaning": "Tôi là học sinh.",
+      "grammarId": "uuid",
+      "vocabularyId": null,
+      "sortOrder": 0,
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z"
+}
+```
 
 ## 4. Vocabulary review
 

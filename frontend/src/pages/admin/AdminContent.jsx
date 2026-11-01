@@ -16,6 +16,7 @@ import {
   deleteContentRequest,
   getContentErrorMessage,
   getContentsRequest,
+  getGrammarRequest,
   saveContentRequest,
 } from "../../api/contents";
 import { getLevelsRequest } from "../../api/levels";
@@ -42,7 +43,49 @@ export default function AdminContent() {
   const [page, setPage] = useState(1);
 
   const [editingContent, setEditingContent] = useState(null);
+  const [grammarLoading, setGrammarLoading] = useState(false);
+  const [grammarLoadError, setGrammarLoadError] = useState("");
   const [deletingContent, setDeletingContent] = useState(null);
+  const editingId = editingContent?.id;
+  const editingType = editingContent?.type;
+
+  useEffect(() => {
+    if (!editingId || editingType !== "grammar") return undefined;
+
+    let cancelled = false;
+
+    getGrammarRequest(editingId)
+      .then((grammar) => {
+        if (cancelled) return;
+        setEditingContent((current) =>
+          current?.id === editingId
+            ? {
+                ...current,
+                korean: grammar.title,
+                meaning: grammar.content,
+                topicId: grammar.topicId,
+                examples:
+                  grammar.examples?.length > 0
+                    ? grammar.examples.map(({ korean, meaning }) => ({
+                        korean,
+                        meaning,
+                      }))
+                    : [{ korean: "", meaning: "" }],
+              }
+            : current,
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) setGrammarLoadError(getContentErrorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setGrammarLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingId, editingType]);
 
   // Tăng reloadKey để tải lại danh sách sau khi thêm / sửa / xóa.
   const [reloadKey, setReloadKey] = useState(0);
@@ -130,7 +173,20 @@ export default function AdminContent() {
     await saveContentRequest(content);
 
     setEditingContent(null);
+    setGrammarLoadError("");
     reloadContents();
+  };
+
+  const openContentEditor = (content) => {
+    setEditingContent(content);
+    setGrammarLoading(content.type === "grammar" && Boolean(content.id));
+    setGrammarLoadError("");
+  };
+
+  const closeContentEditor = () => {
+    setEditingContent(null);
+    setGrammarLoading(false);
+    setGrammarLoadError("");
   };
 
   const handleDeleteContent = async () => {
@@ -359,7 +415,7 @@ export default function AdminContent() {
                     <td className="px-4 py-3.5">
                       <div className="flex justify-end gap-1">
                         <button
-                          onClick={() => setEditingContent(item)}
+                          onClick={() => openContentEditor(item)}
                           className="rounded-lg p-2 text-gray-400 hover:bg-emerald-50 hover:text-emerald-700"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -413,9 +469,12 @@ export default function AdminContent() {
       {/* Edit / Add */}
       {editingContent && (
         <ContentFormModal
+          key={`${editingContent.type}-${editingContent.id ?? "new"}-${editingContent.examples ? "loaded" : "initial"}`}
           content={editingContent}
           topics={topics}
-          onClose={() => setEditingContent(null)}
+          loading={grammarLoading}
+          loadError={grammarLoadError}
+          onClose={closeContentEditor}
           onSave={handleSaveContent}
         />
       )}

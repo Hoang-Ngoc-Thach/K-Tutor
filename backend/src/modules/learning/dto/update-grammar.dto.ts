@@ -1,5 +1,8 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -7,7 +10,10 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { CreateExampleSentenceDto } from './create-example-sentence.dto';
 
 export class UpdateGrammarDto {
   @IsOptional()
@@ -32,4 +38,12 @@ export class UpdateGrammarDto {
   @IsOptional()
   @IsUUID()
   topicId?: string;
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => CreateExampleSentenceDto)
+  examples?: CreateExampleSentenceDto[];
 }

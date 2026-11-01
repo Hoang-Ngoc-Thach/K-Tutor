@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/user/HomePage";
 import AuthPage from "./pages/auth/Authpage";
 import FlashcardPage from "./pages/user/FlashcardPage";
+import GrammarPage from "./pages/user/GrammarPage";
 import TopicListPage from "./pages/user/TopicListPage";
 import WordLearingPage from "./pages/user/WordLearingPage";
 import AuthProvider from "./context/AuthProvider";
@@ -36,6 +37,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <FlashcardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/grammar/:topicId"
+              element={
+                <ProtectedRoute>
+                  <GrammarPage />
                 </ProtectedRoute>
               }
             />

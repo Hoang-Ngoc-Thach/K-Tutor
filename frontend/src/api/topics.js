@@ -5,6 +5,10 @@ export function getTopicsRequest(levelId) {
   return apiFetch(`/topics?levelId=${encodeURIComponent(levelId)}`);
 }
 
+export function getTopicRequest(id) {
+  return apiFetch(`/topics/${encodeURIComponent(id)}`);
+}
+
 export function createTopicRequest(body) {
   return apiFetch("/topics", { method: "POST", body });
 }

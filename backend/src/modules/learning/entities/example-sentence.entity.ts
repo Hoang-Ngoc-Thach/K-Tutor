@@ -22,6 +22,9 @@ export class ExampleSentence {
   @Column({ type: 'varchar', length: 500 })
   meaning: string;
 
+  @Column({ type: 'int', default: 0 })
+  sortOrder: number;
+
   @Column({ type: 'varchar', length: 36, nullable: true })
   vocabularyId: string | null;
 

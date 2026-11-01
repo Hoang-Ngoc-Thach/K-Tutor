@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ResponseMessage } from '../../decorator/customize';
@@ -21,6 +23,18 @@ import { GrammarsService } from './grammars.service';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class GrammarsController {
   constructor(private readonly grammarsService: GrammarsService) {}
+
+  @Get()
+  @ResponseMessage('Get grammars successfully')
+  findAllByTopic(@Query('topicId', ParseUUIDPipe) topicId: string) {
+    return this.grammarsService.findAllByTopic(topicId);
+  }
+
+  @Get(':id')
+  @ResponseMessage('Get grammar successfully')
+  findOneWithExamples(@Param('id', ParseUUIDPipe) id: string) {
+    return this.grammarsService.findOneWithExamples(id);
+  }
 
   @Post()
   @Roles(UserRole.ADMIN)
