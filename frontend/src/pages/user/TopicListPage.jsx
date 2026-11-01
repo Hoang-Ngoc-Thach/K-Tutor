@@ -1,110 +1,170 @@
-// src/pages/user/TopicListPage.jsx
-import React from "react";
-import TopicHeader from "../../components/user/topic-list/TopicHeader";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import TopicCard from "../../components/user/topic-list/TopicCard";
-import LeaderboardStrip from "../../components/user/topic-list/LeaderboardStrip";
-
-// Dữ liệu mẫu giả lập API trả về
-const TOPIC_DATA = [
-  {
-    id: 1,
-    emoji: "🍎",
-    title: "Trái cây & Hoa quả",
-    subtitle: "과일 (gwail)",
-    learned: 32,
-    total: 32,
-    isNew: false,
-  },
-  {
-    id: 2,
-    emoji: "🍲",
-    title: "Ẩm thực & Món ăn",
-    subtitle: "음식 & 요리 (eumsik)",
-    learned: 36,
-    total: 50,
-    isNew: false,
-  },
-  {
-    id: 3,
-    emoji: "✈️",
-    title: "Sân bay & Du lịch",
-    subtitle: "공항 & 여행 (gonghang)",
-    learned: 22,
-    total: 45,
-    isNew: false,
-  },
-  {
-    id: 4,
-    emoji: "👨‍👩‍👧‍👦",
-    title: "Gia đình & Quan hệ",
-    subtitle: "가족 & 관계 (gajok)",
-    learned: 24,
-    total: 28,
-    isNew: false,
-  },
-  {
-    id: 5,
-    emoji: "🌤️",
-    title: "Thời tiết & Bốn mùa",
-    subtitle: "날씨 & 계절 (nalssi)",
-    learned: 0,
-    total: 25,
-    isNew: false,
-  },
-  {
-    id: 6,
-    emoji: "☕",
-    title: "Cà phê & Gọi món",
-    subtitle: "카페 & 주문 (kape)",
-    learned: 0,
-    total: 35,
-    isNew: true,
-  },
-  {
-    id: 7,
-    emoji: "🏥",
-    title: "Bệnh viện & Sức khỏe",
-    subtitle: "병원 & 건강 (byeongwon)",
-    learned: 0,
-    total: 38,
-    isNew: false,
-  },
-  {
-    id: 8,
-    emoji: "🚇",
-    title: "Giao thông & Đi lại",
-    subtitle: "교통 & 지하철 (gyotong)",
-    learned: 24,
-    total: 40,
-    isNew: false,
-  },
-];
+import { getLevelsRequest, getLevelErrorMessage } from "../../api/levels";
+import { getTopicsRequest, getTopicErrorMessage } from "../../api/topics";
 
 export default function TopicListPage() {
+  const [levels, setLevels] = useState([]);
+  const [selectedLevelId, setSelectedLevelId] = useState("");
+  const [topics, setTopics] = useState([]);
+  const [levelsLoading, setLevelsLoading] = useState(true);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [levelsError, setLevelsError] = useState("");
+  const [topicsError, setTopicsError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadLevels() {
+      setLevelsLoading(true);
+      setLevelsError("");
+      try {
+        const result = await getLevelsRequest();
+        if (!active) return;
+        const availableLevels = Array.isArray(result) ? result : [];
+        setLevels(availableLevels);
+        setSelectedLevelId(availableLevels[0]?.id ?? "");
+      } catch (error) {
+        if (active) setLevelsError(getLevelErrorMessage(error));
+      } finally {
+        if (active) setLevelsLoading(false);
+      }
+    }
+
+    loadLevels();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedLevelId) {
+      return undefined;
+    }
+
+    let active = true;
+    async function loadTopics() {
+      setTopicsLoading(true);
+      setTopicsError("");
+      try {
+        const result = await getTopicsRequest(selectedLevelId);
+        if (active) setTopics(Array.isArray(result) ? result : []);
+      } catch (error) {
+        if (active) {
+          setTopics([]);
+          setTopicsError(getTopicErrorMessage(error));
+        }
+      } finally {
+        if (active) setTopicsLoading(false);
+      }
+    }
+
+    loadTopics();
+    return () => {
+      active = false;
+    };
+  }, [selectedLevelId]);
+
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-8 flex flex-col">
-      {/* Phần Header của trang danh sách */}
-      <TopicHeader />
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 md:px-6">
+      <header className="mb-7">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          Lộ trình học
+        </p>
+        <h1 className="mt-2 text-2xl font-bold text-gray-900">
+          Chọn chủ đề từ vựng
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-gray-500">
+          Chọn cấp độ và một chủ đề để bắt đầu học bằng flashcard.
+        </p>
+      </header>
 
-      {/* Danh sách các chủ đề (Grid) */}
-      <div className="mb-6 flex justify-between items-center">
-        <h2 className="text-lg font-bold text-gray-900">Danh sách bộ thẻ</h2>
-        <span className="text-sm text-gray-500">
-          Sắp xếp theo:{" "}
-          <strong className="text-emerald-600 cursor-pointer">
-            Tiến độ học
-          </strong>
-        </span>
-      </div>
+      {levelsLoading ? (
+        <p className="rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-500">
+          Đang tải...
+        </p>
+      ) : levelsError ? (
+        <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          {levelsError}
+        </p>
+      ) : levels.length === 0 ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <p className="text-sm text-gray-500">
+            Chưa có cấp độ học. Vui lòng quay lại sau.
+          </p>
+          <Link
+            to="/"
+            className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+          >
+            Quay lại trang chủ
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div
+            className="mb-7 flex gap-2 overflow-x-auto pb-2"
+            aria-label="Chọn cấp độ"
+          >
+            {levels.map((level) => (
+              <button
+                key={level.id}
+                type="button"
+                onClick={() => {
+                  if (selectedLevelId !== level.id) {
+                    setSelectedLevelId(level.id);
+                    setTopics([]);
+                    setTopicsLoading(true);
+                    setTopicsError("");
+                  }
+                }}
+                aria-pressed={selectedLevelId === level.id}
+                className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                  selectedLevelId === level.id
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "border border-gray-200 bg-white text-gray-600 hover:border-emerald-200 hover:text-emerald-700"
+                }`}
+              >
+                {level.name}
+              </button>
+            ))}
+          </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        {TOPIC_DATA.map((topic) => (
-          <TopicCard key={topic.id} topic={topic} />
-        ))}
-      </div>
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-gray-900">
+              Chủ đề học
+            </h2>
+          </div>
 
-      {/* Banner xếp hạng */}
-      <LeaderboardStrip />
+          {topicsLoading ? (
+            <p className="rounded-xl border border-gray-200 bg-white p-5 text-sm text-gray-500">
+              Đang tải...
+            </p>
+          ) : topicsError ? (
+            <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+              {topicsError}
+            </p>
+          ) : topics.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <p className="text-sm text-gray-500">
+                Cấp độ này hiện chưa có chủ đề học.
+              </p>
+              <Link
+                to="/"
+                className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+              >
+                Quay lại trang chủ
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {topics.map((topic) => (
+                <TopicCard key={topic.id} topic={topic} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
