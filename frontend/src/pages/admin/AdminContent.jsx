@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Search,
   Plus,
+  FileSpreadsheet,
   Pencil,
   Trash2,
   Volume2,
@@ -11,6 +12,7 @@ import {
 
 import AdminSidebar from "../../layout/admin/AdminSidebar";
 import ContentFormModal from "../../components/admin/ContentFormModal";
+import ImportExcelModal from "../../components/admin/ImportExcelModal";
 import DeleteContentModal from "../../components/admin/DeleteContentModal";
 import {
   deleteContentRequest,
@@ -43,6 +45,8 @@ export default function AdminContent() {
 
   const [editingContent, setEditingContent] = useState(null);
   const [deletingContent, setDeletingContent] = useState(null);
+  const [importType, setImportType] = useState(null); // "vocabulary" | "grammar"
+  const [notice, setNotice] = useState("");
 
   // Tăng reloadKey để tải lại danh sách sau khi thêm / sửa / xóa.
   const [reloadKey, setReloadKey] = useState(0);
@@ -146,6 +150,14 @@ export default function AdminContent() {
     }
   };
 
+  const handleImported = (count) => {
+    const unit = importType === "vocabulary" ? "từ vựng" : "ngữ pháp";
+
+    setImportType(null);
+    setNotice(`Đã thêm ${count} ${unit} từ tệp Excel.`);
+    reloadContents();
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50/60">
       <AdminSidebar />
@@ -169,23 +181,49 @@ export default function AdminContent() {
             </p>
           </div>
 
-          <button
-            onClick={() =>
-              setEditingContent({
-                type: "vocabulary",
-                korean: "",
-                pronunciation: "",
-                meaning: "",
-                topicId: topicFilter !== "all" ? topicFilter : topics[0].id,
-              })
-            }
-            disabled={topics.length === 0}
-            className="flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            Thêm nội dung
-          </button>
+          <div className="flex items-center gap-2">
+            {[
+              ["vocabulary", "Nhập từ vựng (Excel)"],
+              ["grammar", "Nhập ngữ pháp (Excel)"],
+            ].map(([type, label]) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setNotice("");
+                  setImportType(type);
+                }}
+                disabled={topics.length === 0}
+                className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                {label}
+              </button>
+            ))}
+
+            <button
+              onClick={() =>
+                setEditingContent({
+                  type: "vocabulary",
+                  korean: "",
+                  pronunciation: "",
+                  meaning: "",
+                  topicId: topicFilter !== "all" ? topicFilter : topics[0].id,
+                })
+              }
+              disabled={topics.length === 0}
+              className="flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+              Thêm nội dung
+            </button>
+          </div>
         </div>
+
+        {notice && (
+          <p className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+            {notice}
+          </p>
+        )}
 
         {error && (
           <p className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-600">
@@ -417,6 +455,17 @@ export default function AdminContent() {
           topics={topics}
           onClose={() => setEditingContent(null)}
           onSave={handleSaveContent}
+        />
+      )}
+
+      {/* Import from Excel */}
+      {importType && (
+        <ImportExcelModal
+          type={importType}
+          topics={topics}
+          defaultTopicId={topicFilter !== "all" ? topicFilter : topics[0].id}
+          onClose={() => setImportType(null)}
+          onImported={handleImported}
         />
       )}
 

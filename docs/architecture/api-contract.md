@@ -6,45 +6,45 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 
 ## 1. Conventions
 
-| Topic | Rule |
-|---|---|
-| Base URL | `/api/v1`. Local: `http://localhost:3000/api/v1`. All paths below are relative to it |
-| Frontend config | `VITE_BACKEND_URL=http://localhost:3000/api/v1`, so the frontend `api/` layer calls paths like `/topics` |
-| Auth | `Authorization: Bearer <accessToken>`. Missing or expired token → `401` (frontend redirects to Login) |
-| Roles | `learner`, `admin`. Admin routes (`/admin/*`) reject learners with `403` |
-| Success envelope | `{ "statusCode": 200, "message": "...", "data": ... }` |
-| Error shape | NestJS default: `{ "statusCode": 400, "message": "..." \| ["..."], "error": "Bad Request" }` |
-| Naming | JSON fields `camelCase`; ids are UUID strings; timestamps ISO 8601 |
-| Enums | goal: `conversation` \| `topik`; role: `learner` \| `admin`; item type: `vocabulary` \| `grammar` |
-| Pagination | Query `current` (1-based) and `pageSize`; response `data: { items: [...], meta: { current, pageSize, total } }` |
-| AI calls | The frontend only talks to the NestJS backend. The backend calls Gemini and `ai-service` (OCR/TTS) |
-| UI language | Messages shown to users are produced by the frontend in Vietnamese; API `message` strings are English |
+| Topic            | Rule                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------- |
+| Base URL         | `/api/v1`. Local: `http://localhost:3000/api/v1`. All paths below are relative to it                            |
+| Frontend config  | `VITE_BACKEND_URL=http://localhost:3000/api/v1`, so the frontend `api/` layer calls paths like `/topics`        |
+| Auth             | `Authorization: Bearer <accessToken>`. Missing or expired token → `401` (frontend redirects to Login)           |
+| Roles            | `learner`, `admin`. Admin routes (`/admin/*`) reject learners with `403`                                        |
+| Success envelope | `{ "statusCode": 200, "message": "...", "data": ... }`                                                          |
+| Error shape      | NestJS default: `{ "statusCode": 400, "message": "..." \| ["..."], "error": "Bad Request" }`                    |
+| Naming           | JSON fields `camelCase`; ids are UUID strings; timestamps ISO 8601                                              |
+| Enums            | goal: `conversation` \| `topik`; role: `learner` \| `admin`; item type: `vocabulary` \| `grammar`               |
+| Pagination       | Query `current` (1-based) and `pageSize`; response `data: { items: [...], meta: { current, pageSize, total } }` |
+| AI calls         | The frontend only talks to the NestJS backend. The backend calls Gemini and `ai-service` (OCR/TTS)              |
+| UI language      | Messages shown to users are produced by the frontend in Vietnamese; API `message` strings are English           |
 
 ## 2. Auth
 
-| Method | Path | Body | Success `data` | Errors |
-|---|---|---|---|---|
-| POST | `/auth/register` | `{ email, password }` | `{ id, email }` (201) | 400 invalid email / short password, 409 email exists |
-| POST | `/auth/login` | `{ email, password }` | `{ accessToken, user: { id, email, role, goal } }` | 401 invalid credentials, 403 `ACCOUNT_LOCKED` |
-| GET | `/auth/me` | — | `{ id, email, role, goal }` | 401 |
-| PATCH | `/users/me/goal` | `{ goal }` | `{ goal }` | 400 |
+| Method | Path             | Body                  | Success `data`                                     | Errors                                               |
+| ------ | ---------------- | --------------------- | -------------------------------------------------- | ---------------------------------------------------- |
+| POST   | `/auth/register` | `{ email, password }` | `{ id, email }` (201)                              | 400 invalid email / short password, 409 email exists |
+| POST   | `/auth/login`    | `{ email, password }` | `{ accessToken, user: { id, email, role, goal } }` | 401 invalid credentials, 403 `ACCOUNT_LOCKED`        |
+| GET    | `/auth/me`       | —                     | `{ id, email, role, goal }`                        | 401                                                  |
+| PATCH  | `/users/me/goal` | `{ goal }`            | `{ goal }`                                         | 400                                                  |
 
 `goal` is `null` until the user picks one. `goal === null` after login means: show goal selection first. Progress under a previous goal is kept when the goal changes.
 
 ## 3. Learning path
 
-| Method | Path | Notes | Success `data` |
-|---|---|---|---|
-| GET | `/levels` | Available levels, ordered by `sortOrder` | `[Level]` |
-| GET | `/levels/:id` | One level | `Level` |
-| POST | `/levels` | Admin only; body `{ name, description?, sortOrder? }` | `Level` |
-| PATCH | `/levels/:id` | Admin only; partial level fields | `Level` |
-| DELETE | `/levels/:id` | Admin only | `{ id }` |
-| GET | `/topics?levelId=<uuid>` | Logged-in users; required level UUID; ordered by `sortOrder` | `[Topic]` |
-| GET | `/topics/:id` | Logged-in users; one topic | `Topic` |
-| POST | `/topics` | Admin only; body `{ name, levelId, description?, sortOrder? }` | `Topic` |
-| PATCH | `/topics/:id` | Admin only; partial topic fields, optional `levelId` | `Topic` |
-| DELETE | `/topics/:id` | Admin only | `{ id }` |
+| Method | Path                     | Notes                                                          | Success `data` |
+| ------ | ------------------------ | -------------------------------------------------------------- | -------------- |
+| GET    | `/levels`                | Available levels, ordered by `sortOrder`                       | `[Level]`      |
+| GET    | `/levels/:id`            | One level                                                      | `Level`        |
+| POST   | `/levels`                | Admin only; body `{ name, description?, sortOrder? }`          | `Level`        |
+| PATCH  | `/levels/:id`            | Admin only; partial level fields                               | `Level`        |
+| DELETE | `/levels/:id`            | Admin only                                                     | `{ id }`       |
+| GET    | `/topics?levelId=<uuid>` | Logged-in users; required level UUID; ordered by `sortOrder`   | `[Topic]`      |
+| GET    | `/topics/:id`            | Logged-in users; one topic                                     | `Topic`        |
+| POST   | `/topics`                | Admin only; body `{ name, levelId, description?, sortOrder? }` | `Topic`        |
+| PATCH  | `/topics/:id`            | Admin only; partial topic fields, optional `levelId`           | `Topic`        |
+| DELETE | `/topics/:id`            | Admin only                                                     | `{ id }`       |
 
 `Topic`:
 
@@ -64,58 +64,69 @@ Topic names must be unique within a level. Creating or moving a topic requires a
 
 ## 4. Vocabulary review
 
-| Method | Path | Notes | Success `data` |
-|---|---|---|---|
-| GET | `/topics/:id/review?format=&limit=` | `format`: `type-meaning` \| `type-korean` \| `match-pairs` | `{ format, questions: [{ itemId, prompt }] }`; for `match-pairs`: `{ format, pairs: { korean: [{ itemId, text }], meaning: [{ itemId, text }] } }` (meaning column shuffled) |
-| POST | `/topics/:id/review/submit` | Body `{ format, answers: [{ itemId, answer }] }`; answers are compared after trimming and case-folding | `{ correct, total, revisit: [{ itemId, korean, meaningVi }] }` |
+| Method | Path                                | Notes                                                                                                  | Success `data`                                                                                                                                                               |
+| ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/topics/:id/review?format=&limit=` | `format`: `type-meaning` \| `type-korean` \| `match-pairs`                                             | `{ format, questions: [{ itemId, prompt }] }`; for `match-pairs`: `{ format, pairs: { korean: [{ itemId, text }], meaning: [{ itemId, text }] } }` (meaning column shuffled) |
+| POST   | `/topics/:id/review/submit`         | Body `{ format, answers: [{ itemId, answer }] }`; answers are compared after trimming and case-folding | `{ correct, total, revisit: [{ itemId, korean, meaningVi }] }`                                                                                                               |
 
 A review session does not change learned/not-learned state in v1.
 
 ## 5. Scan to speech
 
-| Method | Path | Body | Success `data` | Errors |
-|---|---|---|---|---|
-| POST | `/scan/ocr` | `multipart/form-data`, field `image` (jpg, png, webp, max 5 MB) | `{ text }` | 400 unsupported format or too large, 422 no readable text, 502 OCR service failure |
-| POST | `/scan/tts` | `{ text }` (max 500 characters) | `{ audioBase64, mimeType }` | 400 empty or too long, 502 TTS service failure |
+| Method | Path        | Body                                                            | Success `data`              | Errors                                                                             |
+| ------ | ----------- | --------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
+| POST   | `/scan/ocr` | `multipart/form-data`, field `image` (jpg, png, webp, max 5 MB) | `{ text }`                  | 400 unsupported format or too large, 422 no readable text, 502 OCR service failure |
+| POST   | `/scan/tts` | `{ text }` (max 500 characters)                                 | `{ audioBase64, mimeType }` | 400 empty or too long, 502 TTS service failure                                     |
 
 The frontend plays the audio from a data URL built from `audioBase64`. Nothing is stored.
 
 ## 6. Sentence practice
 
-| Method | Path | Body | Success `data` | Errors |
-|---|---|---|---|---|
-| POST | `/practice/sentence` | `{ sentence }` | `{ isCorrect, explanationVi, correctedSentence, suggestion }` | 400 empty, 429 rate limited, 502 AI failure |
+| Method | Path                 | Body           | Success `data`                                                | Errors                                      |
+| ------ | -------------------- | -------------- | ------------------------------------------------------------- | ------------------------------------------- |
+| POST   | `/practice/sentence` | `{ sentence }` | `{ isCorrect, explanationVi, correctedSentence, suggestion }` | 400 empty, 429 rate limited, 502 AI failure |
 
 Single-turn: each request is evaluated alone. `correctedSentence` is `null` when `isCorrect` is true; `suggestion` is optional.
 
 ## 7. TOPIK practice (Proposed)
 
-| Method | Path | Notes | Success `data` |
-|---|---|---|---|
-| GET | `/topik/exams` | List imported exams | `[{ id, name, level, hasListening, hasReading }]` |
-| GET | `/topik/exams/:id/questions?section=` | `section`: `reading` \| `listening`. Correct answers are not included | `[{ id, number, section, prompt, audioUrl, choices: [string], grammarTags: [string] }]` |
-| POST | `/topik/exams/:id/submit` | Body `{ answers: [{ questionId, choice }] }` | `{ score, correct, total, results: [{ questionId, correct, correctChoice, explanationVi, grammarTags }] }` |
+| Method | Path                                  | Notes                                                                 | Success `data`                                                                                             |
+| ------ | ------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| GET    | `/topik/exams`                        | List imported exams                                                   | `[{ id, name, level, hasListening, hasReading }]`                                                          |
+| GET    | `/topik/exams/:id/questions?section=` | `section`: `reading` \| `listening`. Correct answers are not included | `[{ id, number, section, prompt, audioUrl, choices: [string], grammarTags: [string] }]`                    |
+| POST   | `/topik/exams/:id/submit`             | Body `{ answers: [{ questionId, choice }] }`                          | `{ score, correct, total, results: [{ questionId, correct, correctChoice, explanationVi, grammarTags }] }` |
 
 Exams are imported from seed JSON by an admin or a seed script, not scraped at runtime.
 
 ## 8. AI chat with feedback (Proposed)
 
-| Method | Path | Body | Success `data` |
-|---|---|---|---|
-| POST | `/chat/messages` | `{ conversationId?, message }` | `{ conversationId, reply, feedback: { corrections: [{ original, corrected, explanationVi }], vocabularyNotes: [string] } }` |
-| GET | `/chat/conversations/:id` | — | `{ id, messages: [{ role, content, createdAt }] }` |
+| Method | Path                      | Body                           | Success `data`                                                                                                              |
+| ------ | ------------------------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/chat/messages`          | `{ conversationId?, message }` | `{ conversationId, reply, feedback: { corrections: [{ original, corrected, explanationVi }], vocabularyNotes: [string] } }` |
+| GET    | `/chat/conversations/:id` | —                              | `{ id, messages: [{ role, content, createdAt }] }`                                                                          |
 
 Contradicts the PRD non-goal "open chatbot": needs a PRD revision first.
 
 ## 9. Admin (role `admin`)
 
-| Method | Path | Body / query | Success `data` |
-|---|---|---|---|
-| GET | `/admin/users` | `?current=&pageSize=` | paginated `[{ id, email, goal, locked }]` |
-| PATCH | `/admin/users/:id/lock` | `{ locked: boolean }` | `{ id, locked }` |
-| GET | `/admin/stats` | — | `{ totalUsers, byGoal: { conversation, topik }, topTopics: [{ topicId, name, learners }] }` |
+| Method | Path                    | Body / query                                                                                                                                                     | Success `data`                                                                                                                                                                                                                                                        |
+| ------ | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/admin/users`          | `?current=&pageSize=&search=&goal=&locked=`; `search` matches email; lists learners only, newest first                                                           | `{ items: [{ id, email, role, goal, locked, createdAt }], meta, summary: { total, active, locked } }`; `summary` counts all learners and ignores the filters                                                                                                          |
+| PATCH  | `/admin/users/:id/lock` | `{ locked: boolean }`                                                                                                                                            | `{ id, locked }`; 404 `USER_NOT_FOUND`, 403 `CANNOT_LOCK_ADMIN`                                                                                                                                                                                                       |
+| GET    | `/admin/stats`          | —                                                                                                                                                                | `{ totalUsers, byGoal: { conversation, topik }, totalTopics, topicsByLevel: [{ levelId, name, count }], totalVocabularies, totalGrammars, vocabulariesWithExamples }`; `totalUsers` counts learners only                                                              |
+| GET    | `/admin/contents`       | `?current=&pageSize=&search=&type=&topicId=`; `type`: `vocabulary` \| `grammar`; `search` matches korean, pronunciation and meaning (grammar: title and content) | `{ items: [{ id, type, korean, pronunciation, meaning, topicId, topicName, createdAt }], meta, summary: { all, vocabulary, grammar } }`; for grammar, `korean` is the title and `meaning` is the content; `summary` follows `search` and `topicId` but ignores `type` |
+| POST   | `/vocabularies`         | `{ korean, meaning, topicId, pronunciation?, sortOrder? }`                                                                                                       | `Vocabulary`; 404 `TOPIC_NOT_FOUND`                                                                                                                                                                                                                                   |
+| PATCH  | `/vocabularies/:id`     | Partial vocabulary fields, optional `topicId`                                                                                                                    | `Vocabulary`; 404 `VOCABULARY_NOT_FOUND` / `TOPIC_NOT_FOUND`                                                                                                                                                                                                          |
+| POST   | `/vocabularies/import`  | `multipart/form-data`: `file` (.xlsx) and `topicId`; columns `Từ tiếng Hàn` (required), `Phát âm`, `Nghĩa tiếng Việt` (required)                                 | `{ imported }`; all-or-nothing                                                                                                                                                                                                                                        |
+| DELETE | `/vocabularies/:id`     | —                                                                                                                                                                | `{ id }`; its example sentences are deleted too                                                                                                                                                                                                                       |
+| POST   | `/grammars`             | `{ title, content, topicId, sortOrder? }`                                                                                                                        | `Grammar`; 404 `TOPIC_NOT_FOUND`                                                                                                                                                                                                                                      |
+| PATCH  | `/grammars/:id`         | Partial grammar fields, optional `topicId`                                                                                                                       | `Grammar`; 404 `GRAMMAR_NOT_FOUND` / `TOPIC_NOT_FOUND`                                                                                                                                                                                                                |
+| POST   | `/grammars/import`      | `multipart/form-data`: `file` (.xlsx) and `topicId`; columns `Ngữ pháp` and `Giải thích`, both required                                                          | `{ imported }`; all-or-nothing                                                                                                                                                                                                                                        |
+| DELETE | `/grammars/:id`         | —                                                                                                                                                                | `{ id }`; its example sentences are deleted too                                                                                                                                                                                                                       |
 
-Vocabulary and grammar CRUD contracts will be added when those endpoints are implemented. Learning content endpoints use `/topics` rather than `/admin/topics`; topic create/update/delete are admin-only. Deleting a topic with vocabularies or grammar requires a confirmation step in the frontend. A locked user cannot log in (`403 ACCOUNT_LOCKED`).
+All endpoints in this section and the vocabulary/grammar writes are admin-only. Learner-facing reads of vocabulary and grammar are not implemented yet. Learning content endpoints use `/topics` rather than `/admin/topics`; topic create/update/delete are admin-only. Deleting a topic with vocabularies or grammar requires a confirmation step in the frontend. A locked user cannot log in (`403 ACCOUNT_LOCKED`). Example sentences have no endpoints yet.
+
+Excel import (`POST /vocabularies/import`, `POST /grammars/import`): only the first sheet is read, row 1 is the header (matched by name, column order does not matter), blank rows are skipped, and the limits are 2 MB and 500 data rows. Rows are appended to the topic after its current highest `sortOrder`, in file order. Every row is validated first: if any row is invalid nothing is saved and the response is `400 { message: 'IMPORT_INVALID_ROWS', total, errors: [{ row, field, code }] }` (at most 50 errors listed; `code` is `REQUIRED`, `TOO_LONG`, `DUPLICATE_IN_FILE` or `DUPLICATE_EXISTING`; a duplicate is the same korean/title and meaning/content within the topic, case-insensitive). Other errors: `400 IMPORT_FILE_REQUIRED`, `IMPORT_INVALID_FILE` (not a .xlsx), `IMPORT_EMPTY`, `IMPORT_MISSING_COLUMNS { columns }`, `IMPORT_TOO_MANY_ROWS { max }`, `413` (file over 2 MB), `404 TOPIC_NOT_FOUND`. Templates for admins live in `frontend/public/templates`.
 
 ## 10. Decisions to confirm
 
