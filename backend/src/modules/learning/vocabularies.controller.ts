@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,15 +9,20 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ResponseMessage } from '../../decorator/customize';
 import { Roles } from '../../decorator/roles.decorator';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { UserRole } from '../users/entities/user.entity';
 import { CreateVocabularyDto } from './dto/create-vocabulary.dto';
+import { ImportContentDto } from './dto/import-content.dto';
 import { UpdateVocabularyDto } from './dto/update-vocabulary.dto';
+import { excelUploadOptions } from './excel/excel-import.util';
 import { VocabulariesService } from './vocabularies.service';
 
 @Controller('vocabularies')
@@ -41,6 +47,21 @@ export class VocabulariesController {
   @ResponseMessage('Create vocabulary successfully')
   create(@Body() dto: CreateVocabularyDto) {
     return this.vocabulariesService.create(dto);
+  }
+
+  // Thêm hàng loạt từ file Excel (.xlsx) vào một chủ đề.
+  @Post('import')
+  @Roles(UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('file', excelUploadOptions))
+  @ResponseMessage('Import vocabularies successfully')
+  importFromExcel(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body() dto: ImportContentDto,
+  ) {
+    if (!file) {
+      throw new BadRequestException('IMPORT_FILE_REQUIRED');
+    }
+    return this.vocabulariesService.importFromExcel(dto.topicId, file.buffer);
   }
 
   @Patch(':id')

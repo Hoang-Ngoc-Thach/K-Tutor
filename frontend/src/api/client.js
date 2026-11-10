@@ -20,10 +20,11 @@ export function clearToken() {
 }
 
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, details = null) {
     super(message);
     this.name = "ApiError";
     this.status = status; // 0 = network error (server unreachable)
+    this.details = details; // full error body, e.g. per-row import errors
   }
 }
 
@@ -38,8 +39,13 @@ export async function apiFetch(
 ) {
   const token = auth ? getToken() : null;
 
+  // FormData (file upload): the browser sets the multipart Content-Type itself.
+  const isFormData = body instanceof FormData;
+
   const headers = {};
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined && !isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let response;
@@ -47,7 +53,7 @@ export async function apiFetch(
     response = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData || body === undefined ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, "NETWORK_ERROR");
@@ -61,7 +67,11 @@ export async function apiFetch(
       clearToken();
       window.dispatchEvent(new Event("auth:unauthorized"));
     }
-    throw new ApiError(response.status, normalizeMessage(payload?.message));
+    throw new ApiError(
+      response.status,
+      normalizeMessage(payload?.message),
+      payload,
+    );
   }
 
   return payload?.data;

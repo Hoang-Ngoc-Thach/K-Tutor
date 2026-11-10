@@ -5,7 +5,7 @@ import { Grammar } from './entities/grammar.entity';
 import { Level } from './entities/level.entity';
 import { Topic } from './entities/topic.entity';
 import { Vocabulary } from './entities/vocabulary.entity';
-import { AdminContentsController } from './admin-contents.controller';
+import { AdminContentsController } from './contents.controller';
 import { ContentsService } from './contents.service';
 import { GrammarsController } from './grammars.controller';
 import { GrammarsService } from './grammars.service';
