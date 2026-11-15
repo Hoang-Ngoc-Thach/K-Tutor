@@ -125,15 +125,32 @@ The frontend plays the audio from a data URL built from `audioBase64`. Nothing i
 
 Single-turn: each request is evaluated alone. `correctedSentence` is `null` when `isCorrect` is true; `suggestion` is optional.
 
-## 7. TOPIK practice (Proposed)
+## 7. TOPIK practice
 
-| Method | Path                                  | Notes                                                                 | Success `data`                                                                                             |
-| ------ | ------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| GET    | `/topik/exams`                        | List imported exams                                                   | `[{ id, name, level, hasListening, hasReading }]`                                                          |
-| GET    | `/topik/exams/:id/questions?section=` | `section`: `reading` \| `listening`. Correct answers are not included | `[{ id, number, section, prompt, audioUrl, choices: [string], grammarTags: [string] }]`                    |
-| POST   | `/topik/exams/:id/submit`             | Body `{ answers: [{ questionId, choice }] }`                          | `{ score, correct, total, results: [{ questionId, correct, correctChoice, explanationVi, grammarTags }] }` |
+Implemented in `backend/src/modules/topik/` (tables `topik_exams`, `topik_questions`, `topik_attempts`). An exam has a flat list of multiple-choice questions (exactly 4 options); each question is `reading` or `listening`. Listening questions carry a text `script` that the browser reads aloud (Web Speech API); there is no audio upload yet. Writing questions and PDF/OCR import are not built.
 
-Exams are imported from seed JSON by an admin or a seed script, not scraped at runtime.
+Learner endpoints (any logged-in user; published exams only, otherwise `404 TOPIK_EXAM_NOT_FOUND`):
+
+| Method | Path                       | Notes                                                                                                                                        | Success `data`                                                                                          |
+| ------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| GET    | `/topik-exams`             | Published exams, newest year first                                                                                                           | `[{ id, title, level, year, round, durationMinutes, status, description, questionCount }]`              |
+| GET    | `/topik-exams/attempts/me` | All attempts of the current learner, oldest first                                                                                            | `[{ id, examId, score, correct, total, durationSec, createdAt }]`                                       |
+| GET    | `/topik-exams/:id`         | One published exam with its questions. **`answerIndex` and `explanation` are not included**                                                  | `{ ...exam, questions: [{ id, section, text, passage, script, options, sortOrder }] }`                  |
+| POST   | `/topik-exams/:id/submit`  | Body `{ answers: [{ questionId, answerIndex }], durationSec }`. The server grades (unanswered = wrong, score = round(correct / total x 100)) | `{ attemptId, score, correct, total, durationSec, review: [{ questionId, answerIndex, explanation }] }` |
+
+Admin endpoints (`admin` role, others get `403`). Drafts are included and answers are returned:
+
+| Method | Path                     | Notes                                                                                                                 | Success `data`              |
+| ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| GET    | `/admin/topik-exams`     | All exams (draft and published)                                                                                       | `[Exam with questionCount]` |
+| GET    | `/admin/topik-exams/:id` | One exam with all questions, correct answers and explanations                                                         | `Exam with questions`       |
+| POST   | `/admin/topik-exams`     | Body `{ title, level, year, round?, durationMinutes, status?, description?, questions: [Question] }`; 1-200 questions | `Exam with questions` (201) |
+| PATCH  | `/admin/topik-exams/:id` | Partial exam fields; optional `questions` **replaces all** existing questions (1-200 when supplied)                   | `Exam with questions`       |
+| DELETE | `/admin/topik-exams/:id` | Cascades to its questions and learners' attempts                                                                      | `{ id }`                    |
+
+`Question` body: `{ section: reading|listening, text, passage?, script?, options: [4 strings], answerIndex: 0-3, explanation? }`. `level` is `TOPIK I` or `TOPIK II`; `status` is `draft` or `published` (default `draft`).
+
+Error codes: `TOPIK_EXAM_NOT_FOUND` (404), `TOPIK_EXAM_TITLE_EXISTS` (409), `TOPIK_LISTENING_SCRIPT_REQUIRED`, `TOPIK_OPTIONS_DUPLICATED`, `TOPIK_INVALID_ANSWER` (400).
 
 ## 8. AI chat with feedback (Proposed)
 

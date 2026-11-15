@@ -6,7 +6,9 @@ import AuthPage from "./pages/auth/Authpage";
 import FlashcardPage from "./pages/user/FlashcardPage";
 import GrammarPage from "./pages/user/GrammarPage";
 import TopicListPage from "./pages/user/TopicListPage";
-import WordLearingPage from "./pages/user/WordLearingPage";
+import VocabReviewPage from "./pages/user/VocabReviewPage";
+import TopikListPage from "./pages/user/TopikListPage";
+import TopikExamPage from "./pages/user/TopikExamPage";
 import AuthProvider from "./context/AuthProvider";
 import UserLayout from "./layout/user/UserLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -16,6 +18,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminContent from "./pages/admin/AdminContent";
 import AdminTopics from "./pages/admin/AdminTopics";
 import AdminLevels from "./pages/admin/AdminLevels";
+import AdminTopik from "./pages/admin/AdminTopik";
 
 export default function App() {
   return (
@@ -56,17 +59,33 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/review"
+              element={
+                <ProtectedRoute>
+                  <VocabReviewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/topik"
+              element={
+                <ProtectedRoute>
+                  <TopikListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/topik/:examId"
+              element={
+                <ProtectedRoute>
+                  <TopikExamPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* Đường dẫn cũ của trang "Học từ vựng" */}
+            <Route path="/learn" element={<Navigate to="/review" replace />} />
           </Route>
-
-          {/* Trang học: chế độ tập trung, có header/footer riêng */}
-          <Route
-            path="/learn"
-            element={
-              <ProtectedRoute>
-                <WordLearingPage />
-              </ProtectedRoute>
-            }
-          />
 
           {/* Admin routes */}
           <Route
@@ -82,6 +101,14 @@ export default function App() {
             element={
               <ProtectedRoute role="admin">
                 <AdminTopics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/topik"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminTopik />
               </ProtectedRoute>
             }
           />

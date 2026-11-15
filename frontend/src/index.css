@@ -8,3 +8,87 @@
     cursor: pointer;
   }
 }
+
+/* Trang ôn tập từ vựng: game "Mưa từ vựng" */
+@keyframes word-rain-fall {
+  from {
+    transform: translateY(-80px);
+  }
+  to {
+    transform: translateY(var(--rain-distance, 360px));
+  }
+}
+
+@keyframes word-rain-pop {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes word-rain-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
+.word-rain-fall {
+  animation: word-rain-fall var(--rain-duration, 8s) linear
+    var(--rain-delay, 0s) both;
+}
+
+.word-rain-bubble[data-state="hit"] {
+  animation: word-rain-pop 0.7s ease-out forwards;
+}
+
+.word-rain-bubble[data-state="wrong"] {
+  animation: word-rain-shake 0.3s ease-in-out;
+}
+
+/* Trang ôn tập từ vựng: lật thẻ trí nhớ và hiệu ứng rung */
+.memory-card {
+  perspective: 800px;
+}
+
+.memory-card-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.45s ease;
+}
+
+.memory-card-inner[data-flipped="true"] {
+  transform: rotateY(180deg);
+}
+
+.memory-card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.memory-card-back {
+  transform: rotateY(180deg);
+}
+
+.builder-shake {
+  animation: word-rain-shake 0.3s ease-in-out;
+}

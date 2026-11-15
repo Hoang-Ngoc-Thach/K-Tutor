@@ -4,6 +4,7 @@ import { useAuth } from "../../context/useAuth";
 import {
   BarChart2,
   BookOpen,
+  ClipboardList,
   Layers,
   LayoutGrid,
   Users,
@@ -24,6 +25,7 @@ export default function AdminSidebar() {
   const isLevelsActive = location.pathname.startsWith("/admin/levels");
   const isTopicsActive = location.pathname.startsWith("/admin/topics");
   const isContentActive = location.pathname.startsWith("/admin/content");
+  const isTopikActive = location.pathname.startsWith("/admin/topik");
   const isUsersActive = location.pathname.startsWith("/admin/users");
 
   const getNavClass = (isActive) => {
@@ -82,6 +84,12 @@ export default function AdminSidebar() {
             <BookOpen className={getIconClass(isContentActive)} />
 
             <span>Nội dung học</span>
+          </Link>
+
+          <Link to="/admin/topik" className={getNavClass(isTopikActive)}>
+            <ClipboardList className={getIconClass(isTopikActive)} />
+
+            <span>Đề TOPIK</span>
           </Link>
 
           <Link to="/admin/users" className={getNavClass(isUsersActive)}>

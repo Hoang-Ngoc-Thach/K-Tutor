@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { UsersModule } from './modules/users/users.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { TopikModule } from './modules/topik/topik.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AdminModule } from './modules/admin/admin.module';
     UsersModule,
     LearningModule,
     AdminModule,
+    TopikModule,
   ],
   controllers: [AppController],
   providers: [AppService],

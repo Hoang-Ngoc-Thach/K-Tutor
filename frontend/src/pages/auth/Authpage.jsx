@@ -18,10 +18,14 @@ export default function LoginPage() {
   const location = useLocation();
 
   // Already logged in (or just logged in): leave the auth page.
-  // Go back to the page that required login, otherwise to the role's home.
+  // Go back to the page that required login, but only if it belongs to the
+  // user's own area (admin pages for admins, user pages for learners);
+  // otherwise go to the role's home.
   if (user) {
     const from = location.state?.from?.pathname;
-    return <Navigate to={from || getHomePath(user)} replace />;
+    const isAdmin = user.role === "admin";
+    const canReturn = from && from.startsWith("/admin") === isAdmin;
+    return <Navigate to={canReturn ? from : getHomePath(user)} replace />;
   }
 
   const handleRegistered = (email) => {
