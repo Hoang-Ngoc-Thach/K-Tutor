@@ -13,9 +13,13 @@ Code lives in `backend/`. Read `kt-project-context` first for the domain and roa
 backend/src/
 ├── modules/
 │   ├── auth/      register, login, /auth/me, JwtStrategy, guard/jwt-auth.guard.ts, guard/roles.guard.ts
-│   ├── users/     User entity (role learner|admin, goal, locked)
-│   └── learning/  entities: level, topic, vocabulary, grammar, example-sentence
-│                  levels.controller.ts / levels.service.ts / dto/  <- reference implementation
+│   ├── users/     User entity and admin list/lock endpoints (`admin-users.controller.ts`, `users.service.ts`)
+│   ├── learning/  entities: level, topic, vocabulary, grammar, example-sentence
+│   │              levels/topics: CRUD; vocabularies/grammars: CRUD, GET list/detail and Excel imports
+│   │              Grammar create/update accepts example sentences; vocabulary example sentences are not accepted yet
+│   │              `levels.controller.ts` / `levels.service.ts` / `dto/` <- reference implementation
+│   ├── admin/     Admin statistics controller and service
+│   └── topik/     Learner exam list/detail/submit and attempt endpoints; admin exam CRUD
 ├── core/transform.interceptor.ts
 └── decorator/     customize.ts (@ResponseMessage), roles.decorator.ts (@Roles)
 ```

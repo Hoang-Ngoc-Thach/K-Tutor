@@ -44,11 +44,11 @@ The AI service handles AI-related processing independently from the main backend
 ```text
 K-Tutor/
 ├── frontend/
-│   └── ...
-│
+│   ├── public/
+│   └── src/
 ├── backend/
-│   └── ...
-│
+│   ├── src/
+│   └── test/
 ├── ai-service/
 │   ├── ocr/
 │   ├── tts/
@@ -121,23 +121,30 @@ ai-service/README.md
 
 ## Main Features
 
-The platform is designed to support features such as:
+### Implemented
 
-* Korean language learning
-* Korean text recognition from images
-* Text-to-Speech
-* User account management
-* Learning content management
-* AI-assisted learning features
+* Level and topic browsing, vocabulary flashcards, and grammar reading.
+* Browser Web Speech API pronunciation for Korean learning content.
+* Vocabulary review games using vocabulary loaded from the backend API.
+* TOPIK exam management for admins and published exam practice for learners.
+* Admin user management, content management, and statistics dashboards.
+* User registration, login, and role-based admin access.
 
-Additional features will be added during development.
+### Planned
+
+* OCR for Korean text in uploaded images.
+* AI text-to-speech; pronunciation currently uses the browser Web Speech API.
+* AI feedback on learner-written Korean sentences.
+* Persistent learned state and learner progress summaries.
 
 ## Technology Stack
 
 ### Frontend
 
-* React / React Native
-* TypeScript
+* React 19
+* Vite 8
+* JavaScript (JSX)
+* Tailwind CSS v4
 
 ### Backend
 
@@ -154,7 +161,7 @@ Additional features will be added during development.
 
 ### Database
 
-The database technology will be documented when the final database configuration is established.
+* MySQL with TypeORM
 
 ## Development Setup
 
@@ -165,6 +172,8 @@ git clone <repository-url>
 cd K-Tutor
 ```
 
+MySQL must be running before starting the backend. Ensure the database configured in the backend environment exists.
+
 ### Frontend
 
 ```bash
@@ -173,13 +182,29 @@ npm install
 npm run dev
 ```
 
+The Vite development server uses `http://localhost:5173` by default.
+
 ### Backend
 
-```bash
+```powershell
 cd backend
 npm install
+Copy-Item .env.example .env
+```
+
+Configure these variable names in the local `backend/.env` file:
+
+`NODE_ENV`, `PORT`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL`.
+
+Replace the example values with your local settings before starting the backend.
+
+Then start the backend:
+
+```powershell
 npm run start:dev
 ```
+
+The backend uses port `3000` by default; the API base URL is `http://localhost:3000/api/v1`.
 
 ### AI Service
 

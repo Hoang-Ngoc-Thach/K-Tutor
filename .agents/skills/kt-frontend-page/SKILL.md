@@ -52,7 +52,7 @@ Add routes in `App.jsx`. Learner pages: `<ProtectedRoute>`. Admin pages: `<Prote
 
 ## Current state
 
-Admin pages (`AdminContent`, `AdminUsers`, `AdminDashboard`) still use inline mock arrays. Replace the mock with the real API one resource at a time, starting with levels, and only for the resource the user asks about.
+Admin pages (`AdminContent`, `AdminUsers`, `AdminDashboard`, `AdminLevels`, `AdminTopics` and `AdminTopik`) call the real API. Learner pages using real API data include `TopicListPage` (levels and topics), `FlashcardPage` (vocabulary), `GrammarPage` (topic and grammar), the `/review` setup (levels, topics and vocabulary), and `TopikListPage` / `TopikExamPage` (exams, attempts and submissions). The homepage `PracticeTopics` cards still use static sample data.
 
 ## Rules
 
