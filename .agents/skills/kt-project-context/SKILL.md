@@ -45,14 +45,14 @@ Later. Not designed yet.
 
 ## Roadmap and status
 
-1. Backend + admin CRUD for Level / Topic / Vocabulary / Grammar. **Entities done. `levels` and `topics` CRUD done and tested. Next: vocabularies, then grammars, example sentences.**
-2. Admin pages call the real API (they still use inline mock data).
-3. Learner UI: levels → topics → flashcards + grammar reading.
-4. Practice modes.
-5. Pronunciation hook.
-6. Dictionary lookup.
-7. TOPIK.
-8. AI.
+1. Backend + admin CRUD for Level / Topic / Vocabulary / Grammar. **Level, Topic, Vocabulary and Grammar CRUD are implemented; grammar examples are supported. Next: vocabulary example sentences.**
+2. Admin pages for levels, topics, content, users, statistics and TOPIK call the real API.
+3. Learner UI for level/topic browsing, flashcards and grammar reading uses real API data.
+4. Practice modes. **`/review` has four client-side vocabulary games using real API data. Next: add typing the Vietnamese meaning and sentence-ordering practice from examples.**
+5. Pronunciation hook. **Browser Web Speech API pronunciation is implemented.**
+6. Dictionary lookup. **Not implemented; next: evaluate a Vietnamese-capable dictionary source and backend caching.**
+7. TOPIK. **Learner exam listing, attempts, timed multiple-choice practice, scoring and admin exam management are implemented. Next: writing questions, exam audio and PDF/OCR entry.**
+8. AI. **Not implemented; OCR, AI text-to-speech and AI sentence feedback remain planned.**
 
 ## Keeping the roadmap current
 
@@ -60,5 +60,5 @@ When the user confirms that a feature is finished and tested (for example "test 
 
 ## Known mismatches
 
-- `docs/architecture/api-contract.md` still describes the old model (`/topics?goal=`, items, progress) and has **no levels**. When adding learning-content endpoints, update that file in the same task and tell the user what changed.
-- Root `README.md` lists React Native / TypeScript and no database; the real frontend is plain JSX with Vite and the database is MySQL.
+- `docs/architecture/api-contract.md` marks sections 2, 4, 5 and 6 as not implemented.
+- `docs/3.2-prd.md` marks goal selection, persistent learned state, progress summary, OCR, AI text-to-speech and AI sentence feedback as not implemented.
