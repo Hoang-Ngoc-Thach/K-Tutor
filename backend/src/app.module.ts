@@ -8,6 +8,7 @@ import { LearningModule } from './modules/learning/learning.module';
 import { UsersModule } from './modules/users/users.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { TopikModule } from './modules/topik/topik.module';
+import { StorageModule } from './modules/storage/storage.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TopikModule } from './modules/topik/topik.module';
     LearningModule,
     AdminModule,
     TopikModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],
