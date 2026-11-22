@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { UsersModule } from './modules/users/users.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { StudyModule } from './modules/study/study.module';
 import { TopikModule } from './modules/topik/topik.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { TopikModule } from './modules/topik/topik.module';
     LearningModule,
     AdminModule,
     TopikModule,
+    StudyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

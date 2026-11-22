@@ -1,7 +1,5 @@
 # API Contract
 
-Last verified against the code: 2026-11-17
-
 **Status:** Draft — pending team approval
 
 Single source of truth for the frontend, backend and AI service. Derived from `3.5-feature-specification.md`. Sections marked **(Proposed)** go beyond the accepted PRD and need a PRD revision before implementation.
@@ -30,8 +28,6 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 | POST   | `/auth/login`    | `{ email, password }` | `{ accessToken, user: { id, email, role, goal } }` | 401 invalid credentials, 403 `ACCOUNT_LOCKED`        |
 | GET    | `/auth/me`       | —                     | `{ id, email, role, goal }`                        | 401                                                  |
 | PATCH  | `/users/me/goal` | `{ goal }`            | `{ goal }`                                         | 400                                                  |
-
-Status: `PATCH /users/me/goal` is **Not implemented**.
 
 `goal` is `null` until the user picks one. `goal === null` after login means: show goal selection first. Progress under a previous goal is kept when the goal changes.
 
@@ -105,8 +101,6 @@ Grammar examples require non-empty `korean` and `meaning` strings of at most 500
 
 ## 4. Vocabulary review
 
-Not implemented as backend API. The `/review` page loads levels, topics and vocabularies from the real API and runs the game logic on the client.
-
 | Method | Path                                | Notes                                                                                                  | Success `data`                                                                                                                                                               |
 | ------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/topics/:id/review?format=&limit=` | `format`: `type-meaning` \| `type-korean` \| `match-pairs`                                             | `{ format, questions: [{ itemId, prompt }] }`; for `match-pairs`: `{ format, pairs: { korean: [{ itemId, text }], meaning: [{ itemId, text }] } }` (meaning column shuffled) |
@@ -114,20 +108,30 @@ Not implemented as backend API. The `/review` page loads levels, topics and voca
 
 A review session does not change learned/not-learned state in v1.
 
-## 5. Scan to speech
+### 4.1 Learned words, streak and daily review (implemented)
 
-Not implemented. Pronunciation currently uses the browser Web Speech API, which is different from the planned `/scan/tts` endpoint.
+Implemented in `backend/src/modules/study/` (tables `learned_vocabularies`, `study_days`). All endpoints need a logged-in user and only touch that user's own data.
+
+A word is "learned" when the learner presses "Đã nhớ" on a flashcard ("Cần ôn" removes it). The daily review builds 4 stages, one per review game (`choice`, `builder`, `memory`, `typing`) in random order, each with up to 5 random learned words. Finishing all stages counts today toward the streak. Days are calendar days in `Asia/Ho_Chi_Minh` (`STUDY_TIMEZONE` in `streak.ts`). The streak stays alive until the end of the day after the last study day.
+
+| Method | Path                           | Notes                                                                                                                                                     | Success `data`                                                                                                           |
+| ------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| GET    | `/study/learned?topicId=`      | Learned words, optionally of one topic                                                                                                                    | `{ count, items: [{ vocabularyId, topicId }] }`                                                                          |
+| PUT    | `/study/learned`               | Body `{ vocabularyIds: [uuid] (1-500), learned: boolean }`. Idempotent. Unknown id -> `404 VOCABULARY_NOT_FOUND`                                          | `{ learnedCount }`                                                                                                       |
+| GET    | `/study/streak`                | Current and longest streak, whether today is done, last 7 days                                                                                            | `{ today, current, longest, studiedToday, last7Days: [{ date, studied }], learnedCount, minWords }`                      |
+| GET    | `/study/daily-review`          | Needs at least `minWords` (4) learned words, else `400 NOT_ENOUGH_LEARNED_WORDS`                                                                          | `{ date, stages: [{ game, words: [{ id, korean, meaning, pronunciation, topicId }] }], pool: [word] }`                   |
+| POST   | `/study/daily-review/complete` | Body `{ results: [{ vocabularyId, correct }] }` (1-200). Updates per-word counters and today's study day. Words not learned -> `400 INVALID_REVIEW_WORDS` | `{ ...streak, streakIncreased, session: { total, correct } }` (`streakIncreased` is false for a second session that day) |
+
+## 5. Scan to speech
 
 | Method | Path        | Body                                                            | Success `data`              | Errors                                                                             |
 | ------ | ----------- | --------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
 | POST   | `/scan/ocr` | `multipart/form-data`, field `image` (jpg, png, webp, max 5 MB) | `{ text }`                  | 400 unsupported format or too large, 422 no readable text, 502 OCR service failure |
 | POST   | `/scan/tts` | `{ text }` (max 500 characters)                                 | `{ audioBase64, mimeType }` | 400 empty or too long, 502 TTS service failure                                     |
 
-Planned: the frontend will play the audio from `audioBase64`. Nothing is stored.
+The frontend plays the audio from a data URL built from `audioBase64`. Nothing is stored.
 
 ## 6. Sentence practice
-
-Not implemented.
 
 | Method | Path                 | Body           | Success `data`                                                | Errors                                      |
 | ------ | -------------------- | -------------- | ------------------------------------------------------------- | ------------------------------------------- |
@@ -183,11 +187,12 @@ Contradicts the PRD non-goal "open chatbot": needs a PRD revision first.
 | PATCH  | `/vocabularies/:id`     | Partial vocabulary fields, optional `topicId`                                                                                                                    | `Vocabulary`; 404 `VOCABULARY_NOT_FOUND` / `TOPIC_NOT_FOUND`                                                                                                                                                                                                          |
 | POST   | `/vocabularies/import`  | `multipart/form-data`: `file` (.xlsx) and `topicId`; columns `Từ tiếng Hàn` (required), `Phát âm`, `Nghĩa tiếng Việt` (required)                                 | `{ imported }`; all-or-nothing                                                                                                                                                                                                                                        |
 | DELETE | `/vocabularies/:id`     | —                                                                                                                                                                | `{ id }`; its example sentences are deleted too                                                                                                                                                                                                                       |
-| —      | See section 3          | Grammar create/update, including examples, are defined in section 3.                                                                                           | —                                                                                                                                                                                                                                                                     |
+| POST   | `/grammars`             | `{ title, content, topicId, sortOrder? }`                                                                                                                        | `Grammar`; 404 `TOPIC_NOT_FOUND`                                                                                                                                                                                                                                      |
+| PATCH  | `/grammars/:id`         | Partial grammar fields, optional `topicId`                                                                                                                       | `Grammar`; 404 `GRAMMAR_NOT_FOUND` / `TOPIC_NOT_FOUND`                                                                                                                                                                                                                |
 | POST   | `/grammars/import`      | `multipart/form-data`: `file` (.xlsx) and `topicId`; columns `Ngữ pháp` and `Giải thích`, both required                                                          | `{ imported }`; all-or-nothing                                                                                                                                                                                                                                        |
 | DELETE | `/grammars/:id`         | —                                                                                                                                                                | `{ id }`; its example sentences are deleted too                                                                                                                                                                                                                       |
 
-All endpoints in this section and the vocabulary/grammar writes are admin-only. Learner-facing reads exist: `GET /vocabularies` and `GET /grammars` are defined in section 3. Vocabulary example sentences cannot be created yet; only grammar accepts examples. Learning content endpoints use `/topics` rather than `/admin/topics`; topic create/update/delete are admin-only. Deleting a topic with vocabularies or grammar requires a confirmation step in the frontend. A locked user cannot log in (`403 ACCOUNT_LOCKED`). There is no standalone endpoint for example sentences. Grammar examples are created and replaced inside `POST` and `PATCH /grammars` (section 3). Vocabularies cannot receive example sentences yet.
+All endpoints in this section and the vocabulary/grammar writes are admin-only. Learner-facing reads of vocabulary and grammar are not implemented yet. Learning content endpoints use `/topics` rather than `/admin/topics`; topic create/update/delete are admin-only. Deleting a topic with vocabularies or grammar requires a confirmation step in the frontend. A locked user cannot log in (`403 ACCOUNT_LOCKED`). Example sentences have no endpoints yet.
 
 Excel import (`POST /vocabularies/import`, `POST /grammars/import`): only the first sheet is read, row 1 is the header (matched by name, column order does not matter), blank rows are skipped, and the limits are 2 MB and 500 data rows. Rows are appended to the topic after its current highest `sortOrder`, in file order. Every row is validated first: if any row is invalid nothing is saved and the response is `400 { message: 'IMPORT_INVALID_ROWS', total, errors: [{ row, field, code }] }` (at most 50 errors listed; `code` is `REQUIRED`, `TOO_LONG`, `DUPLICATE_IN_FILE` or `DUPLICATE_EXISTING`; a duplicate is the same korean/title and meaning/content within the topic, case-insensitive). Other errors: `400 IMPORT_FILE_REQUIRED`, `IMPORT_INVALID_FILE` (not a .xlsx), `IMPORT_EMPTY`, `IMPORT_MISSING_COLUMNS { columns }`, `IMPORT_TOO_MANY_ROWS { max }`, `413` (file over 2 MB), `404 TOPIC_NOT_FOUND`. Templates for admins live in `frontend/public/templates`.
 
@@ -197,5 +202,5 @@ Excel import (`POST /vocabularies/import`, `POST /grammars/import`): only the fi
 2. Access token only, expires after 1 day, no refresh token in v1.
 3. Image upload: jpg, png, webp, max 5 MB.
 4. TTS returns base64 JSON instead of a binary stream.
-5. Section 7 is implemented; section 8 stays Proposed until the PRD is revised.
+5. Sections 7 and 8 stay Proposed until the PRD is revised.
 6. A locked user is blocked at login and rejected with `403` on later requests.
