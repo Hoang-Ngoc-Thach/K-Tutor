@@ -1,18 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 import AdminSidebar from "../../layout/admin/AdminSidebar";
-import TopikExamFormModal from "../../components/admin/TopikExamFormModal";
 import DeleteContentModal from "../../components/admin/DeleteContentModal";
+import { TOPIK_LEVELS } from "../../components/user/topik/topikUtils";
 import {
-  TOPIK_LEVELS,
-  emptyQuestion,
-} from "../../components/user/topik/topikUtils";
-import {
-  createTopikExamRequest,
   deleteTopikExamRequest,
   getTopikErrorMessage,
-  getTopikExamRequest,
   getTopikExamsRequest,
   updateTopikExamRequest,
 } from "../../api/topikExams";
@@ -23,6 +18,7 @@ const STATUS_STYLES = {
 };
 
 export default function AdminTopik() {
+  const navigate = useNavigate();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,7 +27,6 @@ export default function AdminTopik() {
   const [levelFilter, setLevelFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const [editingExam, setEditingExam] = useState(null);
   const [deletingExam, setDeletingExam] = useState(null);
 
   // Tăng reloadKey để tải lại danh sách sau khi thêm / sửa / xóa.
@@ -80,27 +75,6 @@ export default function AdminTopik() {
     0,
   );
 
-  // Ném lỗi ra ngoài để TopikExamFormModal hiển thị ngay trong modal.
-  const handleSaveExam = async ({ id, ...body }) => {
-    if (id) {
-      await updateTopikExamRequest(id, body);
-    } else {
-      await createTopikExamRequest(body);
-    }
-
-    setEditingExam(null);
-    reloadExams();
-  };
-
-  // Danh sách chỉ có số câu; mở form sửa thì tải đủ câu hỏi và đáp án.
-  const handleEditExam = async (exam) => {
-    try {
-      setEditingExam(await getTopikExamRequest(exam.id));
-    } catch (err) {
-      setError(getTopikErrorMessage(err));
-    }
-  };
-
   const handleToggleStatus = async (exam) => {
     try {
       await updateTopikExamRequest(exam.id, {
@@ -143,18 +117,7 @@ export default function AdminTopik() {
           </div>
 
           <button
-            onClick={() =>
-              setEditingExam({
-                title: "",
-                level: "TOPIK I",
-                year: new Date().getFullYear(),
-                round: "",
-                durationMinutes: 40,
-                status: "draft",
-                description: "",
-                questions: [emptyQuestion()],
-              })
-            }
+            onClick={() => navigate("/admin/topik/new")}
             className="flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-900"
           >
             <Plus className="h-4 w-4" />
@@ -340,7 +303,9 @@ export default function AdminTopik() {
                         </button>
 
                         <button
-                          onClick={() => handleEditExam(exam)}
+                          onClick={() =>
+                            navigate(`/admin/topik/${exam.id}/edit`)
+                          }
                           aria-label="Chỉnh sửa"
                           className="rounded-lg p-2 text-gray-400 hover:bg-emerald-50 hover:text-emerald-700"
                         >
@@ -369,15 +334,6 @@ export default function AdminTopik() {
           </div>
         </section>
       </main>
-
-      {/* Add / Edit */}
-      {editingExam && (
-        <TopikExamFormModal
-          exam={editingExam}
-          onClose={() => setEditingExam(null)}
-          onSave={handleSaveExam}
-        />
-      )}
 
       {/* Delete */}
       <DeleteContentModal

@@ -191,7 +191,23 @@ All endpoints in this section and the vocabulary/grammar writes are admin-only. 
 
 Excel import (`POST /vocabularies/import`, `POST /grammars/import`): only the first sheet is read, row 1 is the header (matched by name, column order does not matter), blank rows are skipped, and the limits are 2 MB and 500 data rows. Rows are appended to the topic after its current highest `sortOrder`, in file order. Every row is validated first: if any row is invalid nothing is saved and the response is `400 { message: 'IMPORT_INVALID_ROWS', total, errors: [{ row, field, code }] }` (at most 50 errors listed; `code` is `REQUIRED`, `TOO_LONG`, `DUPLICATE_IN_FILE` or `DUPLICATE_EXISTING`; a duplicate is the same korean/title and meaning/content within the topic, case-insensitive). Other errors: `400 IMPORT_FILE_REQUIRED`, `IMPORT_INVALID_FILE` (not a .xlsx), `IMPORT_EMPTY`, `IMPORT_MISSING_COLUMNS { columns }`, `IMPORT_TOO_MANY_ROWS { max }`, `413` (file over 2 MB), `404 TOPIC_NOT_FOUND`. Templates for admins live in `frontend/public/templates`.
 
-## 10. Decisions to confirm
+## 10. Uploads
+
+Admin-only endpoints use `Authorization: Bearer <accessToken>` and the standard response envelope. Uploads are stored locally by default; configure Cloudinary as the alternate storage driver.
+
+| Method | Path                   | Body / limits                                                                                         | Success `data`                                      | Errors |
+| ------ | ---------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------ |
+| POST   | `/admin/uploads/image` | `multipart/form-data`, field `file`; JPEG, PNG or WebP; maximum 5 MB                                  | `{ url, publicId, kind: "image", bytes, mimeType }` (201) | 400 `FILE_REQUIRED`, 400 `UNSUPPORTED_FILE_TYPE`, 413 `FILE_TOO_LARGE`, 502 `STORAGE_UPLOAD_FAILED` |
+| POST   | `/admin/uploads/audio` | `multipart/form-data`, field `file`; MP3, M4A/AAC, WAV or OGG; maximum 90 MB                         | `{ url, publicId, kind: "audio", bytes, mimeType }` (201) | 400 `FILE_REQUIRED`, 400 `UNSUPPORTED_FILE_TYPE`, 413 `FILE_TOO_LARGE`, 502 `STORAGE_UPLOAD_FAILED` |
+| DELETE | `/admin/uploads`       | JSON `{ publicId, kind: "image" \| "audio" }`; `publicId` must match the selected kind                 | `null` (200)                                        | 400 `INVALID_PUBLIC_ID`, 404 `STORAGE_FILE_NOT_FOUND`, 502 `STORAGE_DELETE_FAILED` |
+
+Delete accepts only IDs generated for the specified kind: local image IDs `images/<uuid>.<jpg|jpeg|png|webp>`, local audio IDs `audio/<uuid>.<mp3|m4a|aac|wav|ogg>`, Cloudinary image IDs `ktutor/images/<uuid>`, and Cloudinary audio IDs `ktutor/audio/<uuid>`. IDs longer than 200 characters, traversal segments, backslashes, leading slashes, drive-letter paths, URL-encoded sequences, null bytes, and IDs with a mismatched kind or prefix return `400 INVALID_PUBLIC_ID` before the storage driver is called. A valid ID for a missing file still returns `404 STORAGE_FILE_NOT_FOUND`.
+
+Both uploads validate the declared MIME type, filename extension and file signature. Local URLs are served under `/uploads` with byte-range support. These assets are not stored in the database; the caller retains the returned URL and public ID.
+
+Implementation status: Implemented (build and lint pass, manual test pending). The full backend lint command currently reports existing formatting issues in untouched files.
+
+## 11. Decisions to confirm
 
 1. Minimum password length: 8 characters.
 2. Access token only, expires after 1 day, no refresh token in v1.

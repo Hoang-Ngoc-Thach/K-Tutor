@@ -19,6 +19,7 @@ import AdminContent from "./pages/admin/AdminContent";
 import AdminTopics from "./pages/admin/AdminTopics";
 import AdminLevels from "./pages/admin/AdminLevels";
 import AdminTopik from "./pages/admin/AdminTopik";
+import AdminTopikEditor from "./pages/admin/AdminTopikEditor";
 
 export default function App() {
   return (
@@ -101,6 +102,22 @@ export default function App() {
             element={
               <ProtectedRoute role="admin">
                 <AdminTopics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/topik/new"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminTopikEditor key="new" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/topik/:examId/edit"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminTopikEditor key="edit" />
               </ProtectedRoute>
             }
           />

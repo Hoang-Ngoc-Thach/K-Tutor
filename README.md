@@ -194,9 +194,11 @@ Copy-Item .env.example .env
 
 Configure these variable names in the local `backend/.env` file:
 
-`NODE_ENV`, `PORT`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL`.
+`NODE_ENV`, `PORT`, `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `FRONTEND_URL`, `PUBLIC_BASE_URL`, `STORAGE_DRIVER`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
 
 Replace the example values with your local settings before starting the backend.
+
+`STORAGE_DRIVER` selects `local` (default, files under `backend/uploads`) or `cloudinary`. `PUBLIC_BASE_URL` defaults to `http://localhost:<PORT>`; set it when local file URLs must use a public host. For Cloudinary, configure all three Cloudinary variables in `backend/.env`.
 
 Then start the backend:
 

@@ -51,7 +51,7 @@ Later. Not designed yet.
 4. Practice modes. **`/review` has four client-side vocabulary games using real API data. Next: add typing the Vietnamese meaning and sentence-ordering practice from examples.**
 5. Pronunciation hook. **Browser Web Speech API pronunciation is implemented.**
 6. Dictionary lookup. **Not implemented; next: evaluate a Vietnamese-capable dictionary source and backend caching.**
-7. TOPIK. **Learner exam listing, attempts, timed multiple-choice practice, scoring and admin exam management are implemented. Next: writing questions, exam audio and PDF/OCR entry.**
+7. TOPIK. **Learner exam listing, attempts, timed multiple-choice practice, scoring and admin exam management are implemented. The dedicated full-page admin exam editor is Implemented (build and lint pass, manual test pending). File storage and admin image/audio upload endpoints are Implemented (build and changed-file lint pass, manual test pending; full backend lint is blocked by pre-existing formatting issues in untouched files). Next: writing questions, exam audio and PDF/OCR entry.**
 8. AI. **Not implemented; OCR, AI text-to-speech and AI sentence feedback remain planned.**
 
 ## Keeping the roadmap current
