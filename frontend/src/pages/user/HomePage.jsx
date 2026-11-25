@@ -1,16 +1,18 @@
 import React from "react";
-import HeroSection from "../../components/user/home/HeroSection";
-import FeaturesSection from "../../components/user/home/FeaturesSection";
-import PracticeTopics from "../../components/user/home/PracticeTopics";
+import { useAuth } from "../../context/useAuth";
+import GuestHome from "../../components/user/home/GuestHome";
+import LearnerHome from "../../components/user/home/LearnerHome";
 
 export default function HomePage() {
-  return (
-    <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-8 space-y-12">
-      <HeroSection />
+  const { user, loading } = useAuth();
 
-      <FeaturesSection />
+  if (loading) {
+    return (
+      <p className="mx-auto w-full max-w-6xl px-4 py-8 text-sm text-gray-500 md:px-6">
+        Đang tải...
+      </p>
+    );
+  }
 
-      <PracticeTopics />
-    </div>
-  );
+  return user ? <LearnerHome user={user} /> : <GuestHome />;
 }

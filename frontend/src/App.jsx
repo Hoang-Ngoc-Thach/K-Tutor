@@ -7,6 +7,7 @@ import FlashcardPage from "./pages/user/FlashcardPage";
 import GrammarPage from "./pages/user/GrammarPage";
 import TopicListPage from "./pages/user/TopicListPage";
 import VocabReviewPage from "./pages/user/VocabReviewPage";
+import StreakReviewPage from "./pages/user/StreakReviewPage";
 import TopikListPage from "./pages/user/TopikListPage";
 import TopikExamPage from "./pages/user/TopikExamPage";
 import AuthProvider from "./context/AuthProvider";
@@ -65,6 +66,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <VocabReviewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/streak"
+              element={
+                <ProtectedRoute>
+                  <StreakReviewPage />
                 </ProtectedRoute>
               }
             />

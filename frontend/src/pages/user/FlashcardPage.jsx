@@ -13,6 +13,7 @@ import {
   getVocabulariesRequest,
   getVocabularyErrorMessage,
 } from "../../api/vocabularies";
+import { setLearnedRequest, getStudyErrorMessage } from "../../api/study";
 import useSpeak from "../../hooks/useSpeak";
 
 export default function FlashcardPage() {
@@ -27,6 +28,8 @@ export default function FlashcardPage() {
   const [reviewOnly, setReviewOnly] = useState(false);
   const [reviewIds, setReviewIds] = useState([]);
   const [voiceNoticeId, setVoiceNoticeId] = useState("");
+  const [savingRating, setSavingRating] = useState(false);
+  const [ratingError, setRatingError] = useState("");
   const { speak, available: speechAvailable } = useSpeak();
 
   useEffect(() => {
@@ -89,13 +92,25 @@ export default function FlashcardPage() {
   }, [cardIndex]);
 
   const rateCurrentCard = useCallback(
-    (rating) => {
+    async (rating) => {
       if (!currentVocabulary) return;
-      setRatings((currentRatings) => ({
-        ...currentRatings,
-        [currentVocabulary.id]: rating,
-      }));
-      showNextCard();
+      setSavingRating(true);
+      setRatingError("");
+      try {
+        await setLearnedRequest(
+          [currentVocabulary.id],
+          rating === "remembered",
+        );
+        setRatings((currentRatings) => ({
+          ...currentRatings,
+          [currentVocabulary.id]: rating,
+        }));
+        showNextCard();
+      } catch (error) {
+        setRatingError(getStudyErrorMessage(error));
+      } finally {
+        setSavingRating(false);
+      }
     },
     [currentVocabulary, showNextCard],
   );
@@ -358,6 +373,7 @@ export default function FlashcardPage() {
               <button
                 type="button"
                 onClick={() => rateCurrentCard("review")}
+                disabled={savingRating}
                 className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:border-amber-300 hover:bg-amber-50"
               >
                 Cần ôn
@@ -365,11 +381,17 @@ export default function FlashcardPage() {
               <button
                 type="button"
                 onClick={() => rateCurrentCard("remembered")}
+                disabled={savingRating}
                 className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
               >
                 Đã nhớ
               </button>
             </div>
+            {ratingError && (
+              <p role="alert" className="mt-2 text-sm text-red-700">
+                {ratingError}
+              </p>
+            )}
             <div className="mt-3 flex items-center justify-between">
               <button
                 type="button"
