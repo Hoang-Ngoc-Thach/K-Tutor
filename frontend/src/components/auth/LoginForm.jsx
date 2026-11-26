@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { ApiError } from "../../api/client";
 import { getAuthErrorMessage } from "../../api/auth";
+import ResendVerificationButton from "./ResendVerificationButton";
 import { useAuth } from "../../context/useAuth";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,6 +20,8 @@ export default function LoginForm({
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Set when the server says the email is not confirmed yet.
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,12 +38,20 @@ export default function LoginForm({
     }
 
     setError("");
+    setUnverifiedEmail("");
     setSubmitting(true);
     try {
       // On success AuthPage sees the new user and redirects.
       await login({ email: trimmedEmail, password, remember });
     } catch (err) {
       setError(getAuthErrorMessage(err));
+      if (
+        err instanceof ApiError &&
+        err.status === 403 &&
+        err.message.includes("EMAIL_NOT_VERIFIED")
+      ) {
+        setUnverifiedEmail(trimmedEmail);
+      }
       setSubmitting(false);
     }
   };
@@ -150,6 +162,8 @@ export default function LoginForm({
             {error}
           </p>
         )}
+
+        {unverifiedEmail && <ResendVerificationButton email={unverifiedEmail} />}
 
         <button
           type="submit"

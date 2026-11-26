@@ -7,8 +7,9 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { QueryFailedError } from 'typeorm';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { EmailVerificationService } from './email-verification.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { AuthUser, JwtPayload } from './strategy/jwt.strategy';
@@ -20,9 +21,12 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly emailVerification: EmailVerificationService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<{ id: string; email: string }> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ id: string; email: string; emailSent: boolean }> {
     // Đã bỏ nhánh if kiểm tra findByEmail ở đây
 
     const password = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
@@ -32,7 +36,9 @@ export class AuthService {
         email: dto.email,
         password,
       });
-      return { id: user.id, email: user.email };
+      // The learner cannot log in until the emailed link is confirmed.
+      const emailSent = await this.emailVerification.sendFor(user);
+      return { id: user.id, email: user.email, emailSent };
     } catch (error) {
       // Dựa hoàn toàn vào database để bắt lỗi trùng email
       if (
@@ -50,6 +56,11 @@ export class AuthService {
 
     if (user.locked) {
       throw new ForbiddenException('ACCOUNT_LOCKED');
+    }
+
+    // Checked after the password, so it does not reveal which emails exist.
+    if (user.role === UserRole.LEARNER && !user.emailVerifiedAt) {
+      throw new ForbiddenException('EMAIL_NOT_VERIFIED');
     }
 
     const payload: JwtPayload = {

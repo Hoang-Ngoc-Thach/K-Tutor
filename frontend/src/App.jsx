@@ -3,6 +3,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import HomePage from "./pages/user/HomePage";
 import AuthPage from "./pages/auth/Authpage";
+import VerifyEmailPage from "./pages/auth/VerifyEmailPage";
+import UnsubscribePage from "./pages/auth/UnsubscribePage";
 import FlashcardPage from "./pages/user/FlashcardPage";
 import GrammarPage from "./pages/user/GrammarPage";
 import TopicListPage from "./pages/user/TopicListPage";
@@ -29,6 +31,8 @@ export default function App() {
         <Routes>
           {/* Auth route */}
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
 
           {/* User routes: dùng chung sidebar + header tên trang */}
           <Route element={<UserLayout />}>

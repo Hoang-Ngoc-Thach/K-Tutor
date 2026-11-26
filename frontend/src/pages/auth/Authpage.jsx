@@ -7,12 +7,16 @@ import Footer from "../../layout/user/Footer";
 import HeroSection from "../../components/user/home/HeroSection";
 import LoginForm from "../../components/auth/LoginForm";
 import RegisterForm from "../../components/auth/RegisterForm";
+import VerifyEmailNotice from "../../components/auth/VerifyEmailNotice";
 
 export default function LoginPage() {
   // State quản lý việc hiển thị Đăng nhập hay Đăng ký
   const [isLogin, setIsLogin] = useState(true);
   // Kept after registering so Login opens with the email already filled in
   const [registeredEmail, setRegisteredEmail] = useState("");
+  // After registering, the learner must confirm the emailed link before
+  // logging in. { email, emailSent } while that notice is on screen.
+  const [pendingVerification, setPendingVerification] = useState(null);
 
   const { user } = useAuth();
   const location = useLocation();
@@ -24,8 +28,13 @@ export default function LoginPage() {
     return <Navigate to={canReturn ? from : getHomePath(user)} replace />;
   }
 
-  const handleRegistered = (email) => {
+  const handleRegistered = (email, { emailSent }) => {
     setRegisteredEmail(email);
+    setPendingVerification({ email, emailSent });
+  };
+
+  const handleBackToLogin = () => {
+    setPendingVerification(null);
     setIsLogin(true);
   };
 
@@ -41,13 +50,19 @@ export default function LoginPage() {
 
         {/* Right Column - Gọi Form tương ứng */}
         <div className="lg:col-span-5">
-          {isLogin ? (
+          {pendingVerification ? (
+            <VerifyEmailNotice
+              email={pendingVerification.email}
+              emailSent={pendingVerification.emailSent}
+              onBackToLogin={handleBackToLogin}
+            />
+          ) : isLogin ? (
             <LoginForm
               onSwitchToRegister={() => setIsLogin(false)}
               initialEmail={registeredEmail}
               notice={
                 registeredEmail
-                  ? "Đăng ký thành công! Vui lòng đăng nhập để bắt đầu."
+                  ? "Hãy đăng nhập sau khi bạn đã xác nhận email."
                   : ""
               }
             />

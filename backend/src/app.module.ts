@@ -10,7 +10,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { StudyModule } from './modules/study/study.module';
 import { TopikModule } from './modules/topik/topik.module';
 import { StorageModule } from './modules/storage/storage.module';
-
+import { RemindersModule } from './modules/reminders/reminders.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),

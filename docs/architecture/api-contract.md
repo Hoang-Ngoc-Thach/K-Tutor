@@ -24,12 +24,27 @@ Single source of truth for the frontend, backend and AI service. Derived from `3
 
 | Method | Path             | Body                  | Success `data`                                     | Errors                                               |
 | ------ | ---------------- | --------------------- | -------------------------------------------------- | ---------------------------------------------------- |
-| POST   | `/auth/register` | `{ email, password }` | `{ id, email }` (201)                              | 400 invalid email / short password, 409 email exists |
-| POST   | `/auth/login`    | `{ email, password }` | `{ accessToken, user: { id, email, role, goal } }` | 401 invalid credentials, 403 `ACCOUNT_LOCKED`        |
+| POST   | `/auth/register` | `{ email, password }` | `{ id, email, emailSent }` (201), no login token   | 400 invalid email / short password, 409 email exists |
+| POST   | `/auth/login`    | `{ email, password }` | `{ accessToken, user: { id, email, role, goal } }` | 401 invalid credentials, 403 `ACCOUNT_LOCKED` or `EMAIL_NOT_VERIFIED` |
 | GET    | `/auth/me`       | —                     | `{ id, email, role, goal }`                        | 401                                                  |
 | PATCH  | `/users/me/goal` | `{ goal }`            | `{ goal }`                                         | 400                                                  |
 
 `goal` is `null` until the user picks one. `goal === null` after login means: show goal selection first. Progress under a previous goal is kept when the goal changes.
+
+### 2.1 Email confirmation and study reminders
+
+Implemented in `backend/src/modules/auth/` (`EmailVerificationService`), `mail/` and `reminders/`. Registering creates the account but the learner cannot log in until the emailed link is confirmed (`403 EMAIL_NOT_VERIFIED`, checked after the password so it does not reveal which emails exist). Admins are exempt. `emailSent` is `false` when the email could not be sent; the learner can then ask for another one.
+
+| Method | Path                        | Body                    | Success `data`                | Errors                                          |
+| ------ | --------------------------- | ----------------------- | ----------------------------- | ----------------------------------------------- |
+| POST   | `/auth/verify-email`        | `{ token }`             | `{ email }`                   | 400 `INVALID_OR_EXPIRED_TOKEN`                  |
+| POST   | `/auth/resend-verification` | `{ email }`             | `{ requested: true }` (always) | 400 invalid email format                        |
+| POST   | `/reminders/unsubscribe`    | `{ token }` (from email) | `{ unsubscribed: true }`      | 400 `INVALID_UNSUBSCRIBE_TOKEN`                 |
+
+- The token in the email link is random (32 bytes); only its SHA-256 hash is stored (`email_verification_tokens`). It expires after `EMAIL_VERIFICATION_TTL_HOURS` (default 24) and works once. The web app opens the link with a POST, not a GET, so mail scanners cannot use it up.
+- `resend-verification` answers the same way for unknown, verified and unverified emails, and ignores a second request within 60 seconds.
+- Study reminders run daily at 19:00 `Asia/Ho_Chi_Minh` (`@Cron` in `RemindersService`). A verified, unlocked learner who has not studied for `REMINDER_INACTIVE_DAYS` (3) days gets an email, at most one per `REMINDER_COOLDOWN_DAYS` (7) days and at most `REMINDER_MAX_IN_ROW` (3) in a row until they study again. "Studied" means any of: sign-up, marking a word learned, a review, a finished daily review. Every email has an unsubscribe link (`users.reminderEmails`). Run a single backend instance, or the job runs twice.
+- Email settings are in `.env` (`MAIL_*`). With no `MAIL_HOST` in development, emails are printed in the backend log; in production a missing `MAIL_HOST` makes sending fail.
 
 ## 3. Learning path
 

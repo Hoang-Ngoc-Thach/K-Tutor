@@ -1,14 +1,12 @@
 import React, { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { getAuthErrorMessage, registerRequest } from "../../api/auth";
-import { useAuth } from "../../context/useAuth";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 72; // bcrypt only uses the first 72 bytes
 
 export default function RegisterForm({ onSwitchToLogin, onRegistered }) {
-  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -42,17 +40,14 @@ export default function RegisterForm({ onSwitchToLogin, onRegistered }) {
     setError("");
     setSubmitting(true);
     try {
-      await registerRequest({ email: trimmedEmail, password });
+      const result = await registerRequest({ email: trimmedEmail, password });
+      // No auto login: the learner must confirm the emailed link first.
+      // emailSent is false when the server could not send the email.
+      onRegistered?.(trimmedEmail, { emailSent: result.emailSent });
     } catch (err) {
       setError(getAuthErrorMessage(err));
+    } finally {
       setSubmitting(false);
-      return;
-    }
-
-    try {
-      await login({ email: trimmedEmail, password, remember: false });
-    } catch {
-      onRegistered?.(trimmedEmail);
     }
   };
 
