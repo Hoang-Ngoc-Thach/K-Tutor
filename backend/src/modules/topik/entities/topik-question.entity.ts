@@ -43,6 +43,41 @@ export class TopikQuestion {
   @Column({ type: 'text', nullable: true })
   explanation: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  imageUrl: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  imagePublicId: string | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 1,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | number | null) =>
+        value === null ? null : Number(value),
+    },
+  })
+  audioStartSec: number | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 1,
+    nullable: true,
+    transformer: {
+      to: (value: number | null) => value,
+      from: (value: string | number | null) =>
+        value === null ? null : Number(value),
+    },
+  })
+  audioEndSec: number | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  category: string | null;
+
   @Column({ type: 'int', default: 0 })
   sortOrder: number;
 

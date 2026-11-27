@@ -141,28 +141,28 @@ Single-turn: each request is evaluated alone. `correctedSentence` is `null` when
 
 ## 7. TOPIK practice
 
-Implemented in `backend/src/modules/topik/` (tables `topik_exams`, `topik_questions`, `topik_attempts`). An exam has a flat list of multiple-choice questions (exactly 4 options); each question is `reading` or `listening`. Listening questions carry a text `script` that the browser reads aloud (Web Speech API); there is no audio upload yet. Writing questions and PDF/OCR import are not built.
+Implemented in `backend/src/modules/topik/` (tables `topik_exams`, `topik_questions`, `topik_attempts`). An exam has a flat list of multiple-choice questions (exactly 4 options); each question is `reading` or `listening`. An exam may have one uploaded audio file; listening questions may store a start/end range in seconds, and `script` remains the transcript. Questions may also have an uploaded image and a category label. Writing questions and PDF/OCR import are not built.
 
 Learner endpoints (any logged-in user; published exams only, otherwise `404 TOPIK_EXAM_NOT_FOUND`):
 
 | Method | Path                       | Notes                                                                                                                                        | Success `data`                                                                                          |
 | ------ | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| GET    | `/topik-exams`             | Published exams, newest year first                                                                                                           | `[{ id, title, level, year, round, durationMinutes, status, description, questionCount }]`              |
+| GET    | `/topik-exams`             | Published exams, newest year first; audio public IDs are not returned                                                                       | `[{ id, title, level, year, round, durationMinutes, status, description, audioUrl, questionCount }]`    |
 | GET    | `/topik-exams/attempts/me` | All attempts of the current learner, oldest first                                                                                            | `[{ id, examId, score, correct, total, durationSec, createdAt }]`                                       |
-| GET    | `/topik-exams/:id`         | One published exam with its questions. **`answerIndex` and `explanation` are not included**                                                  | `{ ...exam, questions: [{ id, section, text, passage, script, options, sortOrder }] }`                  |
+| GET    | `/topik-exams/:id`         | One published exam with media URLs and question ranges. **Public IDs, `answerIndex` and `explanation` are not included**                      | `{ ...exam, audioUrl, questions: [{ id, section, text, passage, script, options, imageUrl, audioStartSec, audioEndSec, category, sortOrder }] }` |
 | POST   | `/topik-exams/:id/submit`  | Body `{ answers: [{ questionId, answerIndex }], durationSec }`. The server grades (unanswered = wrong, score = round(correct / total x 100)) | `{ attemptId, score, correct, total, durationSec, review: [{ questionId, answerIndex, explanation }] }` |
 
 Admin endpoints (`admin` role, others get `403`). Drafts are included and answers are returned:
 
 | Method | Path                     | Notes                                                                                                                 | Success `data`              |
 | ------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| GET    | `/admin/topik-exams`     | All exams (draft and published)                                                                                       | `[Exam with questionCount]` |
-| GET    | `/admin/topik-exams/:id` | One exam with all questions, correct answers and explanations                                                         | `Exam with questions`       |
-| POST   | `/admin/topik-exams`     | Body `{ title, level, year, round?, durationMinutes, status?, description?, questions: [Question] }`; 1-200 questions | `Exam with questions` (201) |
+| GET    | `/admin/topik-exams`     | All exams (draft and published), including audio URL and public ID                                                     | `[Exam with questionCount]` |
+| GET    | `/admin/topik-exams/:id` | One exam with all questions, media URLs/public IDs, correct answers and explanations                                   | `Exam with questions`       |
+| POST   | `/admin/topik-exams`     | Body `{ title, level, year, round?, durationMinutes, status?, description?, audioUrl?, audioPublicId?, questions: [Question] }`; 1-200 questions | `Exam with questions` (201) |
 | PATCH  | `/admin/topik-exams/:id` | Partial exam fields; optional `questions` **replaces all** existing questions (1-200 when supplied)                   | `Exam with questions`       |
 | DELETE | `/admin/topik-exams/:id` | Cascades to its questions and learners' attempts                                                                      | `{ id }`                    |
 
-`Question` body: `{ section: reading|listening, text, passage?, script?, options: [4 strings], answerIndex: 0-3, explanation? }`. `level` is `TOPIK I` or `TOPIK II`; `status` is `draft` or `published` (default `draft`).
+`Question` body: `{ section: reading|listening, text, passage?, script?, options: [4 strings], answerIndex: 0-3, explanation?, imageUrl?, imagePublicId?, audioStartSec?, audioEndSec?, category? }`. `audioStartSec` and `audioEndSec` are non-negative numbers with at most one decimal place and are allowed only for listening questions; when both are present, end must be greater than start. `category` is at most 100 characters. Media URLs must use HTTPS, except HTTP URLs when using the local storage driver in development; public IDs must match the existing storage validation rules for their media kind. `level` is `TOPIK I` or `TOPIK II`; `status` is `draft` or `published` (default `draft`).
 
 Error codes: `TOPIK_EXAM_NOT_FOUND` (404), `TOPIK_EXAM_TITLE_EXISTS` (409), `TOPIK_LISTENING_SCRIPT_REQUIRED`, `TOPIK_OPTIONS_DUPLICATED`, `TOPIK_INVALID_ANSWER` (400).
 
@@ -208,7 +208,7 @@ Admin-only endpoints use `Authorization: Bearer <accessToken>` and the standard 
 
 Delete accepts only IDs generated for the specified kind: local image IDs `images/<uuid>.<jpg|jpeg|png|webp>`, local audio IDs `audio/<uuid>.<mp3|m4a|aac|wav|ogg>`, Cloudinary image IDs `ktutor/images/<uuid>`, and Cloudinary audio IDs `ktutor/audio/<uuid>`. IDs longer than 200 characters, traversal segments, backslashes, leading slashes, drive-letter paths, URL-encoded sequences, null bytes, and IDs with a mismatched kind or prefix return `400 INVALID_PUBLIC_ID` before the storage driver is called. A valid ID for a missing file still returns `404 STORAGE_FILE_NOT_FOUND`.
 
-Both uploads validate the declared MIME type, filename extension and file signature. Local URLs are served under `/uploads` with byte-range support. These assets are not stored in the database; the caller retains the returned URL and public ID.
+Both uploads validate the declared MIME type, filename extension and file signature. Local URLs are served under `/uploads` with byte-range support. The upload operation itself does not store metadata in the database; the TOPIK admin editor persists the returned URL and public ID when the exam is saved. The learner API exposes media URLs and question ranges but never exposes public IDs.
 
 Implementation status: Implemented (build and lint pass, manual test pending). The full backend lint command currently reports existing formatting issues in untouched files.
 

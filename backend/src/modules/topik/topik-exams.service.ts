@@ -13,6 +13,21 @@ import { TopikExam, TopikExamStatus } from './entities/topik-exam.entity';
 import { TopikQuestion, TopikSection } from './entities/topik-question.entity';
 
 export type TopikExamSummary = TopikExam & { questionCount: number };
+export type TopikExamSummaryForLearner = Pick<
+  TopikExamSummary,
+  | 'id'
+  | 'title'
+  | 'level'
+  | 'year'
+  | 'round'
+  | 'durationMinutes'
+  | 'status'
+  | 'description'
+  | 'audioUrl'
+  | 'questionCount'
+  | 'createdAt'
+  | 'updatedAt'
+>;
 
 // What a learner receives before submitting: no answers, no explanations.
 export interface TopikQuestionForLearner {
@@ -22,6 +37,10 @@ export interface TopikQuestionForLearner {
   passage: string | null;
   script: string | null;
   options: string[];
+  imageUrl: string | null;
+  audioStartSec: number | null;
+  audioEndSec: number | null;
+  category: string | null;
   sortOrder: number;
 }
 
@@ -64,6 +83,8 @@ export class TopikExamsService {
       durationMinutes: dto.durationMinutes,
       status: dto.status ?? TopikExamStatus.DRAFT,
       description: dto.description || null,
+      audioUrl: dto.audioUrl || null,
+      audioPublicId: dto.audioPublicId || null,
       questions: dto.questions.map((question, index) =>
         this.questionsRepo.create(this.toQuestionFields(question, index)),
       ),
@@ -91,6 +112,10 @@ export class TopikExamsService {
     if (dto.status !== undefined) exam.status = dto.status;
     if (dto.description !== undefined) {
       exam.description = dto.description || null;
+    }
+    if (dto.audioUrl !== undefined) exam.audioUrl = dto.audioUrl || null;
+    if (dto.audioPublicId !== undefined) {
+      exam.audioPublicId = dto.audioPublicId || null;
     }
     if (dto.questions !== undefined) {
       this.assertQuestionsValid(dto.questions);
@@ -129,8 +154,22 @@ export class TopikExamsService {
 
   // ---- Learner ----
 
-  findPublished(): Promise<TopikExamSummary[]> {
-    return this.findSummaries(TopikExamStatus.PUBLISHED);
+  async findPublished(): Promise<TopikExamSummaryForLearner[]> {
+    const exams = await this.findSummaries(TopikExamStatus.PUBLISHED);
+    return exams.map((exam) => ({
+      id: exam.id,
+      title: exam.title,
+      level: exam.level,
+      year: exam.year,
+      round: exam.round,
+      durationMinutes: exam.durationMinutes,
+      status: exam.status,
+      description: exam.description,
+      audioUrl: exam.audioUrl,
+      questionCount: exam.questionCount,
+      createdAt: exam.createdAt,
+      updatedAt: exam.updatedAt,
+    }));
   }
 
   async findPublishedForLearner(id: string) {
@@ -145,6 +184,7 @@ export class TopikExamsService {
       durationMinutes: exam.durationMinutes,
       status: exam.status,
       description: exam.description,
+      audioUrl: exam.audioUrl,
       // List only the fields that are safe to show before submitting:
       // no correct answer and no explanation.
       questions: exam.questions.map((question): TopikQuestionForLearner => ({
@@ -154,6 +194,10 @@ export class TopikExamsService {
         passage: question.passage,
         script: question.script,
         options: question.options,
+        imageUrl: question.imageUrl,
+        audioStartSec: question.audioStartSec,
+        audioEndSec: question.audioEndSec,
+        category: question.category,
         sortOrder: question.sortOrder,
       })),
     };
@@ -213,6 +257,11 @@ export class TopikExamsService {
       options: question.options,
       answerIndex: question.answerIndex,
       explanation: question.explanation || null,
+      imageUrl: question.imageUrl || null,
+      imagePublicId: question.imagePublicId || null,
+      audioStartSec: isListening ? (question.audioStartSec ?? null) : null,
+      audioEndSec: isListening ? (question.audioEndSec ?? null) : null,
+      category: question.category || null,
       sortOrder,
     };
   }

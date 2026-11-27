@@ -12,9 +12,14 @@ import {
   Max,
   MaxLength,
   Min,
+  Validate,
   ValidateNested,
 } from 'class-validator';
 import { TOPIK_LEVELS, TopikExamStatus } from '../entities/topik-exam.entity';
+import {
+  IsAllowedTopikMediaUrlConstraint,
+  IsStoragePublicIdConstraint,
+} from './topik-media.validation';
 import { TopikQuestionDto } from './topik-question.dto';
 
 const trim = ({ value }: { value: unknown }) =>
@@ -57,6 +62,20 @@ export class CreateTopikExamDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(2048)
+  @Validate(IsAllowedTopikMediaUrlConstraint)
+  audioUrl?: string | null;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(200)
+  @Validate(IsStoragePublicIdConstraint, ['audio'])
+  audioPublicId?: string | null;
 
   @IsArray()
   @ArrayMinSize(1)

@@ -16,6 +16,12 @@ import {
   updateTopikExamRequest,
 } from "../../api/topikExams";
 import {
+  deleteUpload,
+  uploadAudio,
+  uploadImage,
+} from "../../api/uploads";
+import { ApiError } from "../../api/client";
+import {
   emptyQuestion,
   OPTION_MARKS,
   SECTIONS,
@@ -33,8 +39,69 @@ function createEmptyExam() {
     durationMinutes: "40",
     status: "draft",
     description: "",
-    questions: [emptyQuestion()],
+    audioUrl: "",
+    audioPublicId: "",
+    questions: [createEmptyQuestion()],
   };
+}
+
+function createEmptyQuestion(section) {
+  return {
+    ...emptyQuestion(section),
+    imageUrl: "",
+    imagePublicId: "",
+    audioStartSec: "",
+    audioEndSec: "",
+    category: "",
+  };
+}
+
+function collectUploadRefs(exam) {
+  const uploads = [];
+  if (exam.audioPublicId) {
+    uploads.push({ publicId: exam.audioPublicId, kind: "audio" });
+  }
+  exam.questions?.forEach((question) => {
+    if (question.imagePublicId) {
+      uploads.push({ publicId: question.imagePublicId, kind: "image" });
+    }
+  });
+  return [
+    ...new Map(
+      uploads.map((upload) => [`${upload.kind}:${upload.publicId}`, upload]),
+    ).values(),
+  ];
+}
+
+function getUploadErrorMessage(error) {
+  if (!(error instanceof ApiError)) {
+    return "Không thể tải tệp lên. Vui lòng thử lại.";
+  }
+  if (error.status === 401) {
+    return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+  }
+  if (error.status === 403) {
+    return "Bạn không có quyền tải tệp lên.";
+  }
+  if (error.message.includes("FILE_REQUIRED")) {
+    return "Vui lòng chọn tệp cần tải lên.";
+  }
+  if (error.message.includes("FILE_TOO_LARGE")) {
+    return "Tệp vượt quá dung lượng cho phép.";
+  }
+  if (error.message.includes("UNSUPPORTED_FILE_TYPE")) {
+    return "Định dạng tệp không được hỗ trợ.";
+  }
+  if (error.message.includes("INVALID_PUBLIC_ID")) {
+    return "Mã tệp không hợp lệ.";
+  }
+  if (error.message.includes("STORAGE_UPLOAD_FAILED")) {
+    return "Không thể lưu tệp vào kho lưu trữ. Vui lòng thử lại.";
+  }
+  if (error.status === 0) {
+    return "Không thể kết nối tới máy chủ. Vui lòng thử lại sau.";
+  }
+  return "Không thể tải tệp lên. Vui lòng thử lại.";
 }
 
 function toEditorForm(exam) {
@@ -47,6 +114,8 @@ function toEditorForm(exam) {
     durationMinutes: String(exam.durationMinutes ?? 40),
     status: exam.status ?? "draft",
     description: exam.description ?? "",
+    audioUrl: exam.audioUrl ?? "",
+    audioPublicId: exam.audioPublicId ?? "",
     questions: Array.isArray(exam.questions)
       ? exam.questions.map((question) => ({
           ...question,
@@ -59,6 +128,15 @@ function toEditorForm(exam) {
             : ["", "", "", ""],
           answerIndex: question.answerIndex ?? 0,
           explanation: question.explanation ?? "",
+          imageUrl: question.imageUrl ?? "",
+          imagePublicId: question.imagePublicId ?? "",
+          audioStartSec:
+            question.audioStartSec == null
+              ? ""
+              : String(question.audioStartSec),
+          audioEndSec:
+            question.audioEndSec == null ? "" : String(question.audioEndSec),
+          category: question.category ?? "",
         }))
       : [],
   };
@@ -76,6 +154,17 @@ export default function AdminTopikEditor() {
   const [hasValidated, setHasValidated] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const questionEditorRef = useRef(null);
+  const audioRef = useRef(null);
+  const rangePreviewEndRef = useRef(null);
+  const persistedUploadsRef = useRef([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [mediaError, setMediaError] = useState("");
+  const [audioMetadata, setAudioMetadata] = useState({
+    url: "",
+    duration: null,
+  });
+  const audioDurationSec =
+    audioMetadata.url === form.audioUrl ? audioMetadata.duration : null;
   const loadError =
     loadErrorState && loadErrorState.examId === examId
       ? loadErrorState.message
@@ -98,7 +187,9 @@ export default function AdminTopikEditor() {
           });
           return;
         }
-        setForm(toEditorForm(exam));
+        const editorForm = toEditorForm(exam);
+        setForm(editorForm);
+        persistedUploadsRef.current = collectUploadRefs(editorForm);
         setLoadedExamId(examId);
         setIsDirty(false);
         setHasValidated(false);
@@ -139,8 +230,9 @@ export default function AdminTopikEditor() {
   }, [currentQuestionIndex]);
 
   const validation = useMemo(
-    () => (hasValidated ? validateTopikExam(form) : null),
-    [form, hasValidated],
+    () =>
+      hasValidated ? validateTopikExam(form, audioDurationSec) : null,
+    [form, hasValidated, audioDurationSec],
   );
   const questionsBySection = useMemo(
     () =>
@@ -161,6 +253,7 @@ export default function AdminTopikEditor() {
 
   function updateExamField(field, value) {
     setForm((previous) => ({ ...previous, [field]: value }));
+    if (field === "audioUrl") rangePreviewEndRef.current = null;
     markChanged();
   }
 
@@ -172,6 +265,82 @@ export default function AdminTopikEditor() {
       ),
     }));
     markChanged();
+  }
+
+  function updateQuestionById(questionId, changes) {
+    setForm((previous) => ({
+      ...previous,
+      questions: previous.questions.map((question) =>
+        question.id === questionId ? { ...question, ...changes } : question,
+      ),
+    }));
+    markChanged();
+  }
+
+  async function handleUpload(kind, file, questionId = null) {
+    if (!file || isSaving) return;
+    setIsUploading(true);
+    setMediaError("");
+    try {
+      const uploaded =
+        kind === "audio" ? await uploadAudio(file) : await uploadImage(file);
+      if (kind === "audio") {
+        updateExamField("audioUrl", uploaded.url);
+        updateExamField("audioPublicId", uploaded.publicId);
+      } else {
+        updateQuestionById(questionId, {
+          imageUrl: uploaded.url,
+          imagePublicId: uploaded.publicId,
+        });
+      }
+    } catch (error) {
+      setMediaError(getUploadErrorMessage(error));
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  function getCurrentAudioTime() {
+    if (!audioRef.current) return null;
+
+    const rounded = Math.round(audioRef.current.currentTime * 10) / 10;
+    return Number.isFinite(audioRef.current.duration)
+      ? Math.min(rounded, Math.floor(audioRef.current.duration * 10) / 10)
+      : rounded;
+  }
+
+  async function playAudioRange() {
+    const start = Number(currentQuestion?.audioStartSec);
+    const end = Number(currentQuestion?.audioEndSec);
+    if (
+      !audioRef.current ||
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
+      end <= start
+    ) {
+      setMediaError("Vui lòng nhập mốc bắt đầu và kết thúc hợp lệ.");
+      return;
+    }
+
+    setMediaError("");
+    rangePreviewEndRef.current = end;
+    audioRef.current.currentTime = start;
+    try {
+      await audioRef.current.play();
+    } catch {
+      rangePreviewEndRef.current = null;
+      setMediaError("Không thể phát âm thanh. Vui lòng thử lại.");
+    }
+  }
+
+  function stopAudioAtRangeEnd(event) {
+    if (
+      rangePreviewEndRef.current !== null &&
+      event.currentTarget.currentTime >= rangePreviewEndRef.current
+    ) {
+      event.currentTarget.pause();
+      rangePreviewEndRef.current = null;
+    }
   }
 
   function updateOption(questionIndex, optionIndex, value) {
@@ -197,7 +366,7 @@ export default function AdminTopikEditor() {
       ...previous,
       questions: [
         ...previous.questions,
-        emptyQuestion(previous.questions.at(-1)?.section),
+        createEmptyQuestion(previous.questions.at(-1)?.section),
       ],
     }));
     setCurrentQuestionIndex(newIndex);
@@ -233,7 +402,7 @@ export default function AdminTopikEditor() {
 
   function requestLeave(event) {
     event?.preventDefault();
-    if (isSaving) return;
+    if (isSaving || isUploading) return;
     if (
       isDirty &&
       !window.confirm("Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời trang?")
@@ -245,10 +414,10 @@ export default function AdminTopikEditor() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (isSaving) return;
+    if (isSaving || isUploading) return;
 
     setHasValidated(true);
-    const result = validateTopikExam(form);
+    const result = validateTopikExam(form, audioDurationSec);
     if (!result.isValid) {
       const firstInvalidQuestion = result.errors.find(
         (error) => error.questionIndex !== null,
@@ -268,6 +437,8 @@ export default function AdminTopikEditor() {
       durationMinutes: Math.max(1, Number(form.durationMinutes) || 1),
       status: form.status,
       description: form.description.trim(),
+      audioUrl: form.audioUrl || null,
+      audioPublicId: form.audioPublicId || null,
       questions: form.questions.map((question) => ({
         id: question.id,
         section: question.section,
@@ -278,6 +449,19 @@ export default function AdminTopikEditor() {
         options: question.options.map((option) => option.trim()),
         answerIndex: question.answerIndex,
         explanation: question.explanation.trim(),
+        imageUrl: question.imageUrl || null,
+        imagePublicId: question.imagePublicId || null,
+        audioStartSec:
+          question.section === "listening" &&
+          String(question.audioStartSec ?? "").trim() !== ""
+            ? Number(question.audioStartSec)
+            : null,
+        audioEndSec:
+          question.section === "listening" &&
+          String(question.audioEndSec ?? "").trim() !== ""
+            ? Number(question.audioEndSec)
+            : null,
+        category: (question.category ?? "").trim(),
       })),
     };
 
@@ -290,6 +474,32 @@ export default function AdminTopikEditor() {
         await createTopikExamRequest(payload);
       }
       setIsDirty(false);
+      const currentUploads = collectUploadRefs(payload);
+      const currentKeys = new Set(
+        currentUploads.map((upload) => `${upload.kind}:${upload.publicId}`),
+      );
+      const obsoleteUploads = persistedUploadsRef.current.filter(
+        (upload) =>
+          !currentKeys.has(`${upload.kind}:${upload.publicId}`),
+      );
+      const uniqueObsoleteUploads = [
+        ...new Map(
+          obsoleteUploads.map((upload) => [
+            `${upload.kind}:${upload.publicId}`,
+            upload,
+          ]),
+        ).values(),
+      ];
+      for (const upload of uniqueObsoleteUploads) {
+        void deleteUpload(upload.publicId, upload.kind).catch((error) => {
+          console.error(
+            "Failed to delete replaced TOPIK media:",
+            getUploadErrorMessage(error),
+            error,
+          );
+        });
+      }
+      persistedUploadsRef.current = currentUploads;
       navigate("/admin/topik");
     } catch (error) {
       setSaveError(getTopikErrorMessage(error));
@@ -368,7 +578,7 @@ export default function AdminTopikEditor() {
             <button
               type="button"
               onClick={requestLeave}
-              disabled={isSaving}
+              disabled={isSaving || isUploading}
               className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 disabled:opacity-50"
             >
               Hủy
@@ -376,11 +586,15 @@ export default function AdminTopikEditor() {
             <button
               type="submit"
               form="topik-exam-editor"
-              disabled={isSaving}
+              disabled={isSaving || isUploading}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
-              {isSaving ? "Đang lưu..." : "Lưu đề thi"}
+              {isUploading
+                ? "Đang tải lên..."
+                : isSaving
+                  ? "Đang lưu..."
+                  : "Lưu đề thi"}
             </button>
           </div>
         </header>
@@ -415,12 +629,12 @@ export default function AdminTopikEditor() {
           </section>
         )}
 
-        {saveError && (
+        {(saveError || mediaError) && (
           <p
             role="alert"
             className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs text-red-700"
           >
-            {saveError}
+            {saveError || mediaError}
           </p>
         )}
 
@@ -535,6 +749,61 @@ export default function AdminTopikEditor() {
                     className={textareaClass}
                   />
                 </Field>
+
+                <div className="border-t border-gray-100 pt-4">
+                  <p className="mb-2 text-xs font-semibold text-gray-700">
+                    Audio của đề
+                  </p>
+                  <input
+                    type="file"
+                    accept="audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/ogg,.mp3,.m4a,.aac,.wav,.ogg"
+                    disabled={isUploading || isSaving}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      handleUpload("audio", file);
+                    }}
+                    className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-emerald-800 hover:file:bg-emerald-100 disabled:opacity-50"
+                  />
+                  {isUploading && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Đang tải lên...
+                    </p>
+                  )}
+                  {form.audioUrl && (
+                    <div className="mt-3 space-y-2">
+                      <audio
+                        ref={audioRef}
+                        src={form.audioUrl}
+                        controls
+                        preload="metadata"
+                        onLoadedMetadata={(event) => {
+                          const duration = event.currentTarget.duration;
+                          setAudioMetadata({
+                            url: form.audioUrl,
+                            duration: Number.isFinite(duration)
+                              ? duration
+                              : null,
+                          });
+                        }}
+                        onTimeUpdate={stopAudioAtRangeEnd}
+                        className="w-full"
+                      />
+                      <button
+                        type="button"
+                        disabled={isUploading}
+                        onClick={() => {
+                          updateExamField("audioUrl", "");
+                          updateExamField("audioPublicId", "");
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Xóa audio
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -645,11 +914,15 @@ export default function AdminTopikEditor() {
                   <Field label="Phần thi">
                     <select
                       value={currentQuestion.section}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const section = event.target.value;
                         updateQuestion(currentQuestionIndex, {
-                          section: event.target.value,
-                        })
-                      }
+                          section,
+                          ...(section !== "listening"
+                            ? { audioStartSec: "", audioEndSec: "" }
+                            : {}),
+                        });
+                      }}
                       className={inputClass}
                     >
                       {SECTIONS.map((section) => (
@@ -702,6 +975,141 @@ export default function AdminTopikEditor() {
                         className={textareaClass}
                       />
                     </Field>
+                  )}
+
+                  <Field label="Ảnh của câu hỏi">
+                    <div className="mt-2 space-y-3">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                        disabled={isUploading || isSaving}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          handleUpload("image", file, currentQuestion.id);
+                        }}
+                        className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-emerald-800 hover:file:bg-emerald-100 disabled:opacity-50"
+                      />
+                      {currentQuestion.imageUrl && (
+                        <div className="space-y-2">
+                          <img
+                            src={currentQuestion.imageUrl}
+                            alt={`Ảnh câu hỏi ${currentQuestionIndex + 1}`}
+                            className="max-h-60 max-w-full rounded-xl border border-gray-200 object-contain"
+                          />
+                          <button
+                            type="button"
+                            disabled={isUploading}
+                            onClick={() =>
+                              updateQuestion(currentQuestionIndex, {
+                                imageUrl: "",
+                                imagePublicId: "",
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Xóa ảnh
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Field>
+
+                  <Field label="Dạng câu hỏi">
+                    <input
+                      type="text"
+                      maxLength={100}
+                      list="topik-question-categories"
+                      value={currentQuestion.category ?? ""}
+                      onChange={(event) =>
+                        updateQuestion(currentQuestionIndex, {
+                          category: event.target.value,
+                        })
+                      }
+                      placeholder="Ví dụ: Hội thoại ngắn"
+                      className={inputClass}
+                    />
+                    <datalist id="topik-question-categories">
+                      <option value="Chọn tranh" />
+                      <option value="Hội thoại ngắn" />
+                      <option value="Hội thoại dài" />
+                      <option value="Đọc hiểu" />
+                    </datalist>
+                  </Field>
+
+                  {currentQuestion.section === "listening" && form.audioUrl && (
+                    <div className="grid gap-3 rounded-xl border border-gray-100 bg-gray-50/70 p-4 md:grid-cols-2">
+                      <Field label="Bắt đầu (giây)">
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={currentQuestion.audioStartSec}
+                            onChange={(event) =>
+                              updateQuestion(currentQuestionIndex, {
+                                audioStartSec: event.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                          <button
+                            type="button"
+                            disabled={!form.audioUrl}
+                            onClick={() => {
+                              const time = getCurrentAudioTime();
+                              if (time !== null) {
+                                updateQuestion(currentQuestionIndex, {
+                                  audioStartSec: String(time),
+                                });
+                              }
+                            }}
+                            className="mt-1.5 shrink-0 rounded-xl border border-gray-200 bg-white px-2.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                          >
+                            Lấy từ trình phát
+                          </button>
+                        </div>
+                      </Field>
+                      <Field label="Kết thúc (giây)">
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={currentQuestion.audioEndSec}
+                            onChange={(event) =>
+                              updateQuestion(currentQuestionIndex, {
+                                audioEndSec: event.target.value,
+                              })
+                            }
+                            className={inputClass}
+                          />
+                          <button
+                            type="button"
+                            disabled={!form.audioUrl}
+                            onClick={() => {
+                              const time = getCurrentAudioTime();
+                              if (time !== null) {
+                                updateQuestion(currentQuestionIndex, {
+                                  audioEndSec: String(time),
+                                });
+                              }
+                            }}
+                            className="mt-1.5 shrink-0 rounded-xl border border-gray-200 bg-white px-2.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+                          >
+                            Lấy từ trình phát
+                          </button>
+                        </div>
+                      </Field>
+                      <button
+                        type="button"
+                        onClick={playAudioRange}
+                        className="w-fit rounded-xl bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900 md:col-span-2"
+                      >
+                        Nghe thử
+                      </button>
+                    </div>
                   )}
 
                   <fieldset>

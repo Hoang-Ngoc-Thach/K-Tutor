@@ -45,7 +45,7 @@ export function emptyQuestion(section = "reading") {
   };
 }
 
-export function validateTopikExam(exam) {
+export function validateTopikExam(exam, audioDurationSec = null) {
   const errors = [];
   const questions = Array.isArray(exam.questions) ? exam.questions : [];
   const questionErrors = questions.map(() => []);
@@ -114,6 +114,31 @@ export function validateTopikExam(exam) {
       !String(question.script ?? "").trim()
     ) {
       addQuestionError("câu nghe cần có kịch bản bài nghe.");
+    }
+
+    const startText = String(question.audioStartSec ?? "").trim();
+    const endText = String(question.audioEndSec ?? "").trim();
+    const start = Number(question.audioStartSec);
+    const end = Number(question.audioEndSec);
+    const hasStart = startText !== "";
+    const hasEnd = endText !== "";
+
+    if (
+      (hasStart && (!Number.isFinite(start) || start < 0 || start * 10 % 1)) ||
+      (hasEnd && (!Number.isFinite(end) || end < 0 || end * 10 % 1))
+    ) {
+      addQuestionError("mốc thời gian phải là số không âm, tối đa 1 chữ số thập phân.");
+    }
+    if (hasStart && hasEnd && end <= start) {
+      addQuestionError("thời điểm kết thúc phải lớn hơn thời điểm bắt đầu.");
+    }
+    if (Number.isFinite(audioDurationSec)) {
+      if (hasStart && start > audioDurationSec) {
+        addQuestionError("thời điểm bắt đầu vượt quá thời lượng âm thanh.");
+      }
+      if (hasEnd && end > audioDurationSec) {
+        addQuestionError("thời điểm kết thúc vượt quá thời lượng âm thanh.");
+      }
     }
   });
 

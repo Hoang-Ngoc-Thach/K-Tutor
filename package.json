@@ -1,0 +1,19 @@
+{
+  "name": "k-tutor",
+  "version": "1.0.0",
+  "description": "K-Tutor is a Korean language learning platform designed to support learners through interactive learning features and AI-powered tools.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "playwright test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}
