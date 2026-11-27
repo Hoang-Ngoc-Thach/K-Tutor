@@ -1,0 +1,36 @@
+# CodeRabbit AI Code Review Configuration
+# Docs: https://docs.coderabbit.ai/reference/configuration
+
+language: "vi"
+tone_instructions: >
+  Review kỹ về: validation, security (đặc biệt admin-only routes),
+  TypeORM entity conventions, NestJS DTO decorators, React hooks usage.
+  Ngắn gọn, tập trung vào bugs và security.
+early_access: false
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  sequence_diagrams: true
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/.env"
+    - "!**/package-lock.json"
+    - "backend/src/**"
+    - "frontend/src/**"
+  path_instructions:
+    - path: "backend/src/**"
+      instructions: >
+        NestJS 10 + TypeORM + MySQL. Check: DTOs with class-validator decorators,
+        entities with explicit column types, @UseGuards(JwtAuthGuard, RolesGuard)
+        on admin routes, @Roles(UserRole.ADMIN) on mutations, UPPER_SNAKE error codes,
+        no business logic in controllers, relative imports only.
+    - path: "frontend/src/**"
+      instructions: >
+        React 19 + Vite + Tailwind v4, plain JSX (no TypeScript). Check: functional
+        components with hooks, all API calls through apiFetch (no raw fetch), error
+        messages mapped to Vietnamese, no direct DOM manipulation, Tailwind only.
+chat:
+  auto_reply: true

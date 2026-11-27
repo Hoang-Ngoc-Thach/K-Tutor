@@ -11,6 +11,8 @@ const EXAM_FIELDS = [
   "durationMinutes",
   "status",
   "description",
+  "audioUrl",
+  "audioPublicId",
 ];
 
 // Backend trả null cho các trường văn bản trống; form dùng chuỗi rỗng.
@@ -20,6 +22,11 @@ function normalizeQuestion(question) {
     passage: question.passage ?? "",
     script: question.script ?? "",
     explanation: question.explanation ?? "",
+    imageUrl: question.imageUrl ?? "",
+    imagePublicId: question.imagePublicId ?? "",
+    audioStartSec: question.audioStartSec ?? null,
+    audioEndSec: question.audioEndSec ?? null,
+    category: question.category ?? "",
   };
 }
 
@@ -50,6 +57,11 @@ function toBody(exam) {
       options: question.options,
       answerIndex: question.answerIndex,
       explanation: question.explanation,
+      imageUrl: question.imageUrl,
+      imagePublicId: question.imagePublicId,
+      audioStartSec: question.audioStartSec,
+      audioEndSec: question.audioEndSec,
+      category: question.category,
     }));
   }
   return body;

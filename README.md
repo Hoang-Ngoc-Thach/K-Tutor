@@ -127,6 +127,7 @@ ai-service/README.md
 * Browser Web Speech API pronunciation for Korean learning content.
 * Vocabulary review games using vocabulary loaded from the backend API.
 * TOPIK exam management for admins and published exam practice for learners.
+* Admin TOPIK exam audio, question images, and listening audio ranges.
 * Admin user management, content management, and statistics dashboards.
 * User registration, login, and role-based admin access.
 

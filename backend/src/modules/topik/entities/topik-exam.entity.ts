@@ -47,6 +47,12 @@ export class TopikExam {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  audioUrl: string | null;
+
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  audioPublicId: string | null;
+
   @OneToMany(() => TopikQuestion, (question) => question.exam, {
     cascade: ['insert'],
   })

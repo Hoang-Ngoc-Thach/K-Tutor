@@ -19,7 +19,7 @@ backend/src/
 │   │              Grammar create/update accepts example sentences; vocabulary example sentences are not accepted yet
 │   │              `levels.controller.ts` / `levels.service.ts` / `dto/` <- reference implementation
 │   ├── admin/     Admin statistics controller and service
-│   ├── topik/     Learner exam list/detail/submit and attempt endpoints; admin exam CRUD
+│   ├── topik/     Learner exam list/detail/submit and attempt endpoints; admin exam CRUD with nullable exam audio, question images, categories and listening ranges
 │   └── storage/   Local and Cloudinary drivers; admin image/audio uploads and deletion
 ├── core/transform.interceptor.ts
 └── decorator/     customize.ts (@ResponseMessage), roles.decorator.ts (@Roles)
