@@ -25,6 +25,28 @@ import {
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
 
+const transformAudioTime = ({ value }: { value: unknown }) => {
+  if (value === null || value === '') return null;
+
+  if (typeof value === 'number') {
+    return !Number.isInteger(value) && Math.abs(value) < 1e-6
+      ? String(value)
+      : value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const parsed = Number(trimmed);
+    return !Number.isInteger(parsed) && Math.abs(parsed) < 1e-6
+      ? trimmed
+      : parsed;
+  }
+
+  return value;
+};
+
 export class TopikQuestionDto {
   @IsEnum(TopikSection)
   section: TopikSection;
@@ -88,20 +110,18 @@ export class TopikQuestionDto {
   imagePublicId?: string | null;
 
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === null || value === '' ? null : Number(value),
-  )
+  @Transform(transformAudioTime)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
+  @Max(999999999.9)
   @Validate(IsListeningAudioTimeConstraint)
   audioStartSec?: number | null;
 
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) =>
-    value === null || value === '' ? null : Number(value),
-  )
+  @Transform(transformAudioTime)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
+  @Max(999999999.9)
   @Validate(IsListeningAudioTimeConstraint)
   @Validate(IsAudioEndAfterStartConstraint)
   audioEndSec?: number | null;

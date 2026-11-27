@@ -278,7 +278,7 @@ export default function AdminTopikEditor() {
   }
 
   async function handleUpload(kind, file, questionId = null) {
-    if (!file) return;
+    if (!file || isSaving) return;
     setIsUploading(true);
     setMediaError("");
     try {
@@ -301,9 +301,12 @@ export default function AdminTopikEditor() {
   }
 
   function getCurrentAudioTime() {
-    return audioRef.current
-      ? Math.round(audioRef.current.currentTime * 10) / 10
-      : null;
+    if (!audioRef.current) return null;
+
+    const rounded = Math.round(audioRef.current.currentTime * 10) / 10;
+    return Number.isFinite(audioRef.current.duration)
+      ? Math.min(rounded, Math.floor(audioRef.current.duration * 10) / 10)
+      : rounded;
   }
 
   async function playAudioRange() {
@@ -754,7 +757,7 @@ export default function AdminTopikEditor() {
                   <input
                     type="file"
                     accept="audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/ogg,.mp3,.m4a,.aac,.wav,.ogg"
-                    disabled={isUploading}
+                    disabled={isUploading || isSaving}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
                       event.target.value = "";
@@ -979,7 +982,7 @@ export default function AdminTopikEditor() {
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                        disabled={isUploading}
+                        disabled={isUploading || isSaving}
                         onChange={(event) => {
                           const file = event.target.files?.[0];
                           event.target.value = "";

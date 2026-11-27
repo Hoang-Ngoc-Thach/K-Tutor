@@ -102,6 +102,51 @@ describe('TOPIK media DTO validation', () => {
     );
   });
 
+  it.each([false, []])(
+    'rejects audioStartSec value %p',
+    async (audioStartSec) => {
+      const exam = {
+        ...validExam,
+        questions: [{ ...validExam.questions[0], audioStartSec }],
+      };
+
+      expect(await getValidationMessages(exam)).toContain(
+        'audioStartSec must be a number conforming to the specified constraints',
+      );
+    },
+  );
+
+  it('rejects a very small scientific notation audio time cleanly', async () => {
+    const exam = {
+      ...validExam,
+      questions: [{ ...validExam.questions[0], audioStartSec: 1e-7 }],
+    };
+
+    expect(await getValidationMessages(exam)).toContain(
+      'audioStartSec must be a number conforming to the specified constraints',
+    );
+  });
+
+  it('rejects audio end times above the DECIMAL(10, 1) range', async () => {
+    const exam = {
+      ...validExam,
+      questions: [{ ...validExam.questions[0], audioEndSec: 1000000000 }],
+    };
+
+    expect(await getValidationMessages(exam)).toContain(
+      'audioEndSec must not be greater than 999999999.9',
+    );
+  });
+
+  it('accepts zero as an audio start time', async () => {
+    const exam = {
+      ...validExam,
+      questions: [{ ...validExam.questions[0], audioStartSec: 0 }],
+    };
+
+    expect(await getValidationMessages(exam)).toEqual([]);
+  });
+
   it('accepts HTTPS URLs with storage IDs that match their media kind', async () => {
     const exam = {
       ...validExam,
