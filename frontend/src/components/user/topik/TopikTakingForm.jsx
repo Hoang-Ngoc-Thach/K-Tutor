@@ -14,6 +14,22 @@ import { OPTION_MARKS, formatClock, sectionLabel } from "./topikUtils";
 
 const currentTime = () => Date.now();
 
+function waitForLoadedMetadata(audio) {
+  if (audio.readyState >= 1) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const handleLoadedMetadata = () => {
+      audio.removeEventListener("error", handleError);
+      resolve();
+    };
+    const handleError = () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      reject(new Error("Audio metadata could not be loaded."));
+    };
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true });
+    audio.addEventListener("error", handleError, { once: true });
+  });
+}
+
 // Form làm bài: câu hỏi trắc nghiệm, đồng hồ đếm ngược, bảng số câu, nộp bài.
 // onSubmit({ answers, elapsedSec }) được gọi khi học viên nộp hoặc hết giờ.
 export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit, onQuit }) {
@@ -108,6 +124,15 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
     if (!audio || examAudioEnded) return;
     setAudioError("");
     try {
+      if (audio.error) {
+        const resumeAt = hasStartedExamAudio ? audio.currentTime : 0;
+        audio.load();
+        await waitForLoadedMetadata(audio);
+        audio.currentTime = resumeAt;
+        await audio.play();
+        setHasStartedExamAudio(true);
+        return;
+      }
       if (audio.paused && hasStartedExamAudio) {
         await audio.play();
       } else if (!hasStartedExamAudio) {
@@ -131,8 +156,12 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
       return;
     }
     setAudioError("");
-    audio.currentTime = Number(question.audioStartSec);
     try {
+      if (audio.error) {
+        audio.load();
+        await waitForLoadedMetadata(audio);
+      }
+      audio.currentTime = Number(question.audioStartSec);
       await audio.play();
       setPlayingRange(true);
     } catch {
