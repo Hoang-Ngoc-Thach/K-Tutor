@@ -18,6 +18,7 @@ export default function TopikExamPage() {
   const [phase, setPhase] = useState("intro"); // intro | taking | result
   const [attemptKey, setAttemptKey] = useState(0);
   const [outcome, setOutcome] = useState(null);
+  const [audioMode, setAudioMode] = useState("practice");
 
   useEffect(() => {
     let active = true;
@@ -122,6 +123,7 @@ export default function TopikExamPage() {
       <TopikTakingForm
         key={attemptKey}
         exam={exam}
+        audioMode={audioMode}
         onSubmit={handleSubmit}
         onQuit={() => setPhase("intro")}
       />
@@ -143,6 +145,7 @@ export default function TopikExamPage() {
   const listeningCount = exam.questions.filter(
     (question) => question.section === "listening",
   ).length;
+  const hasExamAudio = Boolean(exam.audioUrl);
 
   return (
     <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 md:px-6">
@@ -173,10 +176,29 @@ export default function TopikExamPage() {
           <li>Đồng hồ bắt đầu chạy khi bạn bấm "Bắt đầu làm bài".</li>
           <li>Hết giờ, hệ thống tự nộp bài với các câu đã chọn.</li>
           <li>Có thể đánh dấu câu cần xem lại và chuyển câu bằng bảng số câu.</li>
-          {listeningCount > 0 && (
+          {listeningCount > 0 && hasExamAudio && (
+            <li>Đề có audio nghe. Chọn luyện từng câu để nghe lại hoặc thi thử để nghe audio một lần như thi thật.</li>
+          )}
+          {listeningCount > 0 && !hasExamAudio && (
             <li>Câu nghe được đọc bằng giọng đọc của trình duyệt, bạn có thể nghe nhiều lần.</li>
           )}
         </ul>
+
+        {listeningCount > 0 && hasExamAudio && (
+          <fieldset className="mt-5 grid gap-3 sm:grid-cols-2">
+            <legend className="mb-2 text-sm font-semibold text-gray-800">Chọn chế độ nghe</legend>
+            <label className={`cursor-pointer rounded-xl border p-4 transition ${audioMode === "practice" ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-gray-300"}`}>
+              <input type="radio" name="audioMode" value="practice" checked={audioMode === "practice"} onChange={() => setAudioMode("practice")} className="mr-2 accent-emerald-600" />
+              <span className="text-sm font-bold text-gray-900">Luyện từng câu</span>
+              <span className="mt-1 block pl-6 text-xs leading-relaxed text-gray-600">Nghe từng đoạn audio theo câu hỏi và có thể nghe lại nhiều lần.</span>
+            </label>
+            <label className={`cursor-pointer rounded-xl border p-4 transition ${audioMode === "exam" ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-gray-300"}`}>
+              <input type="radio" name="audioMode" value="exam" checked={audioMode === "exam"} onChange={() => setAudioMode("exam")} className="mr-2 accent-emerald-600" />
+              <span className="text-sm font-bold text-gray-900">Thi thử (nghe 1 lần)</span>
+              <span className="mt-1 block pl-6 text-xs leading-relaxed text-gray-600">Audio phát liên tục một lần như thi thật, không tua hoặc nghe lại.</span>
+            </label>
+          </fieldset>
+        )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <button

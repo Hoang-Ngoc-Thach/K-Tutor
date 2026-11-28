@@ -127,7 +127,7 @@ test.describe("TOPIK Admin Audio & Image E2E", () => {
     await firstStartLink.click();
 
     await page.getByRole("button", { name: /Bắt đầu làm bài/i }).click();
-    await page.getByRole("button", { name: /Nộp bài/i }).click();
+    await page.getByRole("button", { name: /Nộp bài/i }).first().click();
 
     // Confirm modal if present, then check result screen
     const confirmDialog = page.getByRole("dialog", { name: "Nộp bài?" });
