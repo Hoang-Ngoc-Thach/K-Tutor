@@ -14,9 +14,25 @@ import { OPTION_MARKS, formatClock, sectionLabel } from "./topikUtils";
 
 const currentTime = () => Date.now();
 
+function waitForLoadedMetadata(audio) {
+  if (audio.readyState >= 1) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const handleLoadedMetadata = () => {
+      audio.removeEventListener("error", handleError);
+      resolve();
+    };
+    const handleError = () => {
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      reject(new Error("Audio metadata could not be loaded."));
+    };
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata, { once: true });
+    audio.addEventListener("error", handleError, { once: true });
+  });
+}
+
 // Form làm bài: câu hỏi trắc nghiệm, đồng hồ đếm ngược, bảng số câu, nộp bài.
 // onSubmit({ answers, elapsedSec }) được gọi khi học viên nộp hoặc hết giờ.
-export default function TopikTakingForm({ exam, onSubmit, onQuit }) {
+export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit, onQuit }) {
   const totalSeconds = exam.durationMinutes * 60;
   const { speak } = useSpeak();
   const [startedAt] = useState(currentTime);
@@ -28,11 +44,156 @@ export default function TopikTakingForm({ exam, onSubmit, onQuit }) {
   const [quitting, setQuitting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const examAudioRef = useRef(null);
+  const lastAudioTimeRef = useRef(0);
+  const pendingExamResumeRef = useRef(null);
+  const rangeRequestIdRef = useRef(0);
+  const [audioTime, setAudioTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [hasStartedExamAudio, setHasStartedExamAudio] = useState(false);
+  const [examAudioEnded, setExamAudioEnded] = useState(false);
+  const [examAudioPlaying, setExamAudioPlaying] = useState(false);
+  const [playingRange, setPlayingRange] = useState(false);
+  const [audioError, setAudioError] = useState("");
 
   const question = exam.questions[currentIndex];
   const answeredCount = Object.keys(answers).length;
   const unanswered = exam.questions.length - answeredCount;
   const isLast = currentIndex === exam.questions.length - 1;
+  const hasAudio = Boolean(exam.audioUrl);
+  const hasRange = question.audioStartSec != null && question.audioEndSec != null;
+
+  useEffect(() => {
+    const audio = examAudioRef.current;
+    if (!audio) return undefined;
+    const updateTime = () => {
+      setAudioTime(audio.currentTime || 0);
+      lastAudioTimeRef.current = audio.currentTime || 0;
+      if (audio.duration && Number.isFinite(audio.duration)) setAudioDuration(audio.duration);
+      if (audioMode === "practice" && playingRange && audio.currentTime >= Number(question.audioEndSec)) {
+        audio.pause();
+        setPlayingRange(false);
+      }
+    };
+    const updateDuration = () => {
+      if (Number.isFinite(audio.duration)) setAudioDuration(audio.duration);
+    };
+    const handleEnded = () => {
+      setExamAudioEnded(true);
+      setExamAudioPlaying(false);
+      setPlayingRange(false);
+    };
+    const handlePlay = () => setExamAudioPlaying(true);
+    const handlePause = () => setExamAudioPlaying(false);
+    const preventSeeking = () => {
+      if (audioMode === "exam" && hasStartedExamAudio && !examAudioEnded && Math.abs(audio.currentTime - lastAudioTimeRef.current) > 0.5) {
+        audio.currentTime = lastAudioTimeRef.current;
+      }
+    };
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateDuration);
+    audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("seeking", preventSeeking);
+    updateDuration();
+    return () => {
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateDuration);
+      audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("seeking", preventSeeking);
+    };
+  }, [audioMode, examAudioEnded, hasStartedExamAudio, playingRange, question.audioEndSec]);
+
+  useEffect(() => {
+    if (audioMode !== "practice" || !hasAudio) return;
+    const audio = examAudioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    setPlayingRange(false);
+    setAudioTime(0);
+    return () => {
+      rangeRequestIdRef.current += 1;
+    };
+  }, [currentIndex, audioMode, hasAudio]);
+
+  useEffect(() => () => {
+    rangeRequestIdRef.current += 1;
+    examAudioRef.current?.pause();
+  }, []);
+
+  async function toggleExamAudio() {
+    const audio = examAudioRef.current;
+    if (!audio || examAudioEnded) return;
+    setAudioError("");
+    try {
+      if (audio.error) {
+        if (pendingExamResumeRef.current === null) {
+          pendingExamResumeRef.current = hasStartedExamAudio
+            ? Math.max(audio.currentTime || 0, lastAudioTimeRef.current || 0)
+            : 0;
+        }
+        const resumeAt = pendingExamResumeRef.current;
+        audio.load();
+        await waitForLoadedMetadata(audio);
+        lastAudioTimeRef.current = resumeAt;
+        audio.currentTime = resumeAt;
+        await audio.play();
+        pendingExamResumeRef.current = null;
+        setHasStartedExamAudio(true);
+        return;
+      }
+      if (audio.paused && hasStartedExamAudio) {
+        await audio.play();
+      } else if (!hasStartedExamAudio) {
+        audio.currentTime = 0;
+        await audio.play();
+        setHasStartedExamAudio(true);
+      } else {
+        audio.pause();
+      }
+    } catch {
+      setAudioError("Không thể phát audio. Hãy bấm nút để thử phát lại.");
+    }
+  }
+
+  async function toggleQuestionRange() {
+    const requestId = ++rangeRequestIdRef.current;
+    const audio = examAudioRef.current;
+    if (!audio) return;
+    if (playingRange) {
+      rangeRequestIdRef.current += 1;
+      audio.pause();
+      setPlayingRange(false);
+      return;
+    }
+    setAudioError("");
+    try {
+      if (audio.error) {
+        audio.load();
+        await waitForLoadedMetadata(audio);
+        if (rangeRequestIdRef.current !== requestId) {
+          return;
+        }
+      }
+      audio.currentTime = Number(question.audioStartSec);
+      await audio.play();
+      if (rangeRequestIdRef.current !== requestId) {
+        return;
+      }
+      setPlayingRange(true);
+    } catch {
+      setAudioError("Không thể phát audio. Vui lòng thử lại.");
+    }
+  }
+
+  function formatAudioTime(seconds) {
+    const safeSeconds = Math.max(0, Math.floor(seconds || 0));
+    return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, "0")}`;
+  }
 
   // Luôn giữ hàm nộp bài mới nhất để bộ đếm giờ gọi được khi hết giờ.
   // onSubmit có thể ném lỗi (ví dụ mất mạng): giữ nguyên bài làm và cho nộp lại.
@@ -109,6 +270,22 @@ export default function TopikTakingForm({ exam, onSubmit, onQuit }) {
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_280px]">
+        {hasAudio && audioMode === "exam" && (
+          <div className="sticky top-2 z-20 col-span-full rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm lg:top-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-amber-900">Chế độ thi thử — Audio chỉ phát 1 lần</p>
+                <p className="mt-1 text-xs tabular-nums text-amber-800">{formatAudioTime(audioTime)} / {formatAudioTime(audioDuration)}</p>
+              </div>
+              <button type="button" onClick={toggleExamAudio} disabled={examAudioEnded} className="rounded-xl bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50">
+                {examAudioEnded ? "Đã phát xong audio phần nghe" : hasStartedExamAudio ? (examAudioPlaying ? "Tạm dừng audio" : "Tiếp tục audio") : "Bắt đầu phát audio"}
+              </button>
+            </div>
+            {audioError && <p role="alert" className="mt-2 text-xs text-red-700">{audioError}</p>}
+            {examAudioEnded && <p className="mt-2 text-xs font-semibold text-amber-900">Đã phát xong audio phần nghe</p>}
+          </div>
+        )}
+        {hasAudio && <audio ref={examAudioRef} src={exam.audioUrl} preload="metadata" controls={audioMode === "practice" && question.section === "listening" && !hasRange} className={audioMode === "practice" && question.section === "listening" && !hasRange ? "col-span-full w-full" : "hidden"} />}
         {/* Câu hỏi */}
         <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm sm:p-7">
           <div className="flex items-center justify-between gap-3">
@@ -119,6 +296,9 @@ export default function TopikTakingForm({ exam, onSubmit, onQuit }) {
               <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
                 {sectionLabel(question.section)}
               </span>
+              {question.category && (
+                <span className="rounded-lg bg-sky-50 px-2.5 py-1 text-xs font-semibold text-sky-700">{question.category}</span>
+              )}
             </div>
             <button
               type="button"
@@ -139,7 +319,7 @@ export default function TopikTakingForm({ exam, onSubmit, onQuit }) {
             {question.text}
           </p>
 
-          {question.section === "listening" && (
+          {question.section === "listening" && !hasAudio && (
             <button
               type="button"
               onClick={() => speak(question.script)}
@@ -150,10 +330,22 @@ export default function TopikTakingForm({ exam, onSubmit, onQuit }) {
             </button>
           )}
 
+          {question.section === "listening" && hasAudio && audioMode === "practice" && hasRange && (
+            <button type="button" onClick={toggleQuestionRange} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
+              <Volume2 className="h-4 w-4" />
+              {playingRange ? "Dừng nghe" : `Nghe câu này (${Number(question.audioStartSec).toFixed(1)}s – ${Number(question.audioEndSec).toFixed(1)}s)`}
+            </button>
+          )}
+          {audioError && audioMode === "practice" && <p role="alert" className="mt-2 text-xs text-red-700">{audioError}</p>}
+
           {question.passage && (
             <blockquote className="mt-4 whitespace-pre-line rounded-xl border-l-4 border-emerald-300 bg-gray-50 p-4 text-base leading-loose text-gray-800">
               {question.passage}
             </blockquote>
+          )}
+
+          {question.imageUrl && (
+            <img src={question.imageUrl} alt={`Hình minh họa câu ${currentIndex + 1}`} className="mt-5 max-h-80 w-full rounded-xl border border-gray-200 object-contain" />
           )}
 
           <fieldset className="mt-5 space-y-2.5">
