@@ -46,6 +46,8 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
   const [submitError, setSubmitError] = useState("");
   const examAudioRef = useRef(null);
   const lastAudioTimeRef = useRef(0);
+  const pendingExamResumeRef = useRef(null);
+  const rangeRequestIdRef = useRef(0);
   const [audioTime, setAudioTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [hasStartedExamAudio, setHasStartedExamAudio] = useState(false);
@@ -113,9 +115,13 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
     audio.currentTime = 0;
     setPlayingRange(false);
     setAudioTime(0);
+    return () => {
+      rangeRequestIdRef.current += 1;
+    };
   }, [currentIndex, audioMode, hasAudio]);
 
   useEffect(() => () => {
+    rangeRequestIdRef.current += 1;
     examAudioRef.current?.pause();
   }, []);
 
@@ -125,11 +131,18 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
     setAudioError("");
     try {
       if (audio.error) {
-        const resumeAt = hasStartedExamAudio ? audio.currentTime : 0;
+        if (pendingExamResumeRef.current === null) {
+          pendingExamResumeRef.current = hasStartedExamAudio
+            ? Math.max(audio.currentTime || 0, lastAudioTimeRef.current || 0)
+            : 0;
+        }
+        const resumeAt = pendingExamResumeRef.current;
         audio.load();
         await waitForLoadedMetadata(audio);
+        lastAudioTimeRef.current = resumeAt;
         audio.currentTime = resumeAt;
         await audio.play();
+        pendingExamResumeRef.current = null;
         setHasStartedExamAudio(true);
         return;
       }
@@ -148,9 +161,11 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
   }
 
   async function toggleQuestionRange() {
+    const requestId = ++rangeRequestIdRef.current;
     const audio = examAudioRef.current;
     if (!audio) return;
     if (playingRange) {
+      rangeRequestIdRef.current += 1;
       audio.pause();
       setPlayingRange(false);
       return;
@@ -160,9 +175,17 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
       if (audio.error) {
         audio.load();
         await waitForLoadedMetadata(audio);
+        if (rangeRequestIdRef.current !== requestId) {
+          audio.pause();
+          return;
+        }
       }
       audio.currentTime = Number(question.audioStartSec);
       await audio.play();
+      if (rangeRequestIdRef.current !== requestId) {
+        audio.pause();
+        return;
+      }
       setPlayingRange(true);
     } catch {
       setAudioError("Không thể phát audio. Vui lòng thử lại.");
