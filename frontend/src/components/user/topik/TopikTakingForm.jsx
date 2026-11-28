@@ -176,14 +176,12 @@ export default function TopikTakingForm({ exam, audioMode = "practice", onSubmit
         audio.load();
         await waitForLoadedMetadata(audio);
         if (rangeRequestIdRef.current !== requestId) {
-          audio.pause();
           return;
         }
       }
       audio.currentTime = Number(question.audioStartSec);
       await audio.play();
       if (rangeRequestIdRef.current !== requestId) {
-        audio.pause();
         return;
       }
       setPlayingRange(true);
